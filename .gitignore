@@ -1,3 +1,7 @@
+# Tool outputs and editor temporary / backup files
+*.xlsx
+*.bak
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
