@@ -5,7 +5,9 @@
 
 # TODO: Update OUTCOME_NUMBER re to handle new format from AY20. Currently pass without condensing.
 
-# TODO: Simpler args for selecting program or (program, year)
+# TODO: Year should default to current AY
+
+# TODO: Select year range
 
 import os
 import re
@@ -19,6 +21,8 @@ TIME_TAG = datetime.now().strftime('%G%m%dT%H%M%S') # used to tag artifacts crea
 METADATA = {'Program': 'C3', 'Course Number': 'C5', 'Quarter/Year': 'C7',
     'Section': 'G5', 'Instructor': 'G7', 'Outcome': 'A10', 'Percent Proficient': 'B17'}
 LEVEL = ['Exemplary', 'Accomplished', 'Proficient', 'Developing', 'Beginning']
+
+PROGRAM = {'BME', 'CE', 'CS', 'EE', 'SE'}
 
 OUTCOME_NUMBER = re.compile(r"^\((\w+)\)") # extract just output number from longer string
 
@@ -48,7 +52,10 @@ def get_so_data(full_path):
 def main(args):
     """Summarize MSOE EECS SO XLSX files recursively"""
     all_data = []
-    for dirpath, _, filenames in os.walk(args.directory):
+    assert args.program in PROGRAM, f'Program code {args.program} is not recognized'
+    assert 1980 < args.year < 2999, f'Academic year ({args.year}) must be in 4-digit format'
+    for dirpath, _, filenames in os.walk(os.path.join(args.directory, args.program,
+        str(args.year))):
         for filename in filenames:
             if filename.endswith(".xlsx"):
                 full_path = os.path.join(dirpath, filename)
@@ -65,10 +72,12 @@ if __name__ == "__main__":
     # execute only if run as a script
 
     assessment_path = ['Box', 'EECS Faculty and Staff', 'EECS Assessment Process',
-        'Student Outcome Assessment Forms', 'CE', '2020']
+        'Student Outcome Assessment Forms'] # Next 2 levels: program code, 4-digit AY
 
     parser = argparse.ArgumentParser(description=__doc__,
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    parser.add_argument('-p', '--program', type=str, default='CE', help='Academic program code')
+    parser.add_argument('-y', '--year', type=int, default=2020, help='4-digit academic year')
     parser.add_argument('-d', '--directory', type=str,
         default=os.path.join(os.path.expanduser("~"), *assessment_path),
         help='Directory to analyze')
