@@ -3,7 +3,11 @@
 
 """Summarize MSOE EECS SO XLSX files recursively"""
 
-# TODO: Update OUTCOME_NUMBER re to handle new format from AY20. Currently pass without condensing.
+# TODO: order by outcome number, course number, section
+
+# TODO: Add columns (N>=pro,N) to summarize as required by process.
+
+# TODO: Format row bands per outcome
 
 # TODO: Year should default to current AY
 
@@ -24,7 +28,9 @@ LEVEL = ['Exemplary', 'Accomplished', 'Proficient', 'Developing', 'Beginning']
 
 PROGRAM = {'BME', 'CE', 'CS', 'EE', 'SE'}
 
-OUTCOME_NUMBER = re.compile(r"^\((\w+)\)") # extract just output number from longer string
+# extract just outcome number from longer string
+OUTCOME_NUMBER = [re.compile(r"^\((\w+)\)"), # < AY20
+                  re.compile(r"^\[\w+\s(\d)\]")] # >= AY20
 
 def get_so_data(full_path):
     """Read summary SO assessment data from the given XLSX file"""
@@ -37,11 +43,13 @@ def get_so_data(full_path):
         'Unexpected format: did not find highest level description where expected'
 
     data_values = []
-    for key in METADATA:
-        value = sheet[METADATA[key]].value
-        if key == 'Outcome':
-            if result := OUTCOME_NUMBER.match(value):
-                value = result[0] # discard extra text if pattern is matched
+    for field, cell in METADATA.items():
+        value = sheet[cell].value
+        if field == 'Outcome':
+            for pattern in OUTCOME_NUMBER:
+                if result := pattern.match(value):
+                    value = result[1] # discard extra text; [0] is entire match
+                    break
         data_values.append(value)
 
     for row in level_rows:
