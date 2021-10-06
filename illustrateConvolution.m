@@ -2,16 +2,15 @@
 % with causal exponential decay.
 
 % Eric Durant <eric.durant@gmail.com> <https://durant.io/>
-% Heavily modified version (MATLAB 2021b updates, pure MATLAB implementation, and more) of
+% Heavily updated version (see git log) of
 % https://commons.wikimedia.org/wiki/File:Convolution_of_spiky_function_with_box2.gif
-% fetched on 2021-10-04
 
 % TODO:
-% Add option to live render in MATLAB (and disable GIF generation)
-% Fix colormap changing each frame
-% Increase rendering resolution
+% Option to disable GIF generation (when live render is all that is needed)
 % Change function notation to standard EE signals notation (and MSOE EE3032)
 % Support other functions / time supports
+% Increase GIF render RAM efficiency (about 6 GB peak, rendering raw 24b video to RAM)
+% Increase GIF efficiency/compression/cmap depth (32 MB GIF typical render)
 
 function illustrateConvolution()
 
@@ -21,12 +20,16 @@ t = -2.1 : 0.001 : 4;
 F1 = exp(-t);
 F1(t<0) = 0;
 F2 = abs(t)<=0.5;
-clf
+
+fig = figure; % New figure ensures it is on top so the animation is visible during rendering.
+% TODO: Define width height as variables here, prealloc frame_anim
+fig.Position = [1 1 1920 1080]; % LL of primary monitor; doesn't avoid GUI at bottom (e.g., Windows interface).
+% Appropriate GIF rendering size (HD video); doesn't check that (scaled) monitor is large enough)
 
 [~, zero_offset] = min(abs(t));
 
 frameRate = 20.3366666; % hard-coded constant without explanation in original
-SyncFrames = [1 round(frameRate*(1:length(t)))];
+SyncFrames = [1 round(frameRate*(1:length(t)))]; % TODO: This is much longer than needed, which makes using its length for alloc frame_image below wasteful. should it be based on duration of t (not samples of t)?
 frame = 1;
 integral = nan(size(t));
 for offset_i = 1:length(t)
@@ -37,7 +40,7 @@ for offset_i = 1:length(t)
     integral(offset_i) = sum(product)/length(t)*(t(end)-t(1));
 
     if offset_i==SyncFrames(frame)
-        frame = frame+1;
+        frame = frame+1; % TODO: Bug? frame always >= 2
         area(t, product, 'facecolor', 'yellow');
         hold on
         plot(t, F1, 'b', t, F2_shifted, 'r', t, integral, 'k', [offset offset], [0 2], 'k:')
@@ -47,22 +50,22 @@ for offset_i = 1:length(t)
         xlabel('\tau & t')
         grid on
         legend('Area under f(\tau)g(t-\tau)', 'f(\tau)', 'g(t-\tau)', '(f\astg)(t)')
-        [frame_image, cmap] = rgb2ind(frame2im(getframe(gcf)), 256);
-
-        % FIXME: This assumes cmap never changes, which is invalid. Improvements options: 1) pass
-        % cmap back to rgb2ind on successive calls to dither to initial map, 2) use a fixed
-        % standard map, 3) compute a globally optimal map post hoc. Note: MATLAB R2021b
-        % documentation shows support for GIF frame append with cmap varying, but this causes a
-        % runtime error that is substantiated on recent MathWorks and reddit posts.
-
-        if frame == 1
+        frame_image = frame2im(getframe(gcf));
+        if frame == 1 % FIXME: This alloc code never runs, frame >= 2; so frame_anim grows dynamically, resulting in noticable alloc pauses in live render
             [H,W] = size(frame_image);
-            frame_anim = NaN(H,W,1,length(SyncFrames)); % 2021b imwrite GIF requires HWCN or HW, not HWN
+            frame_anim = NaN(H,W,3,length(SyncFrames)); % HWCN
+            % FIXME: frame_image is uint8, so can't use NaN
         end
-        frame_anim(:,:,1,frame) = frame_image;
+        frame_anim(:,:,:,frame) = frame_image;
     end
 end
 
-imwrite(frame_anim, cmap, fileName, 'gif', 'Loopcount', inf, 'DelayTime', 1/frameRate)
+frame_anim = permute(frame_anim, [1 2 4 3]);
+sz = size(frame_anim); % HWNC
+[frame_anim_idx, cmap] = rgb2ind(reshape(frame_anim, sz(1), [], 3), 256); % collapse (WN) for rgb2ind
+sz(4) = 1; % C = 1
+frame_anim_idx = permute(reshape(frame_anim_idx, sz), [1 2 4 3]); % H(WN)C -> HWNC -> HWCN
+
+imwrite(frame_anim_idx, cmap, fileName, 'gif', 'Loopcount', inf, 'DelayTime', 1/frameRate)
 
 end % function
