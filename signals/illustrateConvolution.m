@@ -5,13 +5,15 @@
 % https://commons.wikimedia.org/wiki/File:Convolution_of_spiky_function_with_box2.gif
 
 % TODO:
-% Support other functions (function calculation objects) / time supports
+% Add arguments for calculation and plotting time support
 % Option to disable video generation when live render is all that is needed (saves huge amount of RAM)
 % Better handling if size larger than primary monitor is selected (currently size mismatch error)
 
-function illustrateConvolution()
+function illustrateConvolution(fh, fx)
+narginchk(0,2)
+assert (nargin ~= 1, "if h(t) is provided, x(t) must also be provided.")
 
-basename = "conv_box_spike";
+basename = "conv";
 
 set(0, 'DefaultAxesFontSize', 15)
 set(0, 'DefaultLineLineWidth', 1.0)
@@ -19,21 +21,14 @@ set(0, 'DefaultLineLineWidth', 1.0)
 dt = 0.001;
 t = -2.1 : dt : 4;
 
-if true % original functions
+if ~exist('fx', 'var')
+    % original functions
     vals_x = exp(-t);
     vals_x(t<0) = 0;
     vals_h = abs(t)<=0.5;
-else % another set of functions to try. This works but updates needed to get less time truncation and moving folding further away from caller.
-    % x is a triangular pulse from 0 to 2 s...
-    vals_x = zeros(size(t));
-    r1 = 0<=t & t<=1;
-    vals_x(r1) = t(r1);
-    r2 = 1<=t & t<=2;
-    vals_x(r2) = 2-t(r2);
-    % h(t) = e^-t u(t), but func_h = e^t u(-t) (the *time-reversed* impulse response)
-    vals_h = zeros(size(t));
-    r3 = t<=0;
-    vals_h(r3) = exp(t(r3));
+else
+    vals_x = fx(t); % x(tau)
+    vals_h = fh(-t); % h(t-tau), t=0 case; shifts happen below
 end
 
 fig = figure; % New figure ensures it is on top so the animation is visible during rendering.
