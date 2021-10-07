@@ -7,7 +7,6 @@
 
 % TODO:
 % Option to disable GIF generation (when live render is all that is needed)
-% Change function notation to standard EE signals notation (and MSOE EE3032, g->h, f->x)
 % Support other functions / time supports
 % Try GIF without dither
 % Increase GIF render RAM efficiency (about 6 GB peak, rendering raw 24b video to RAM)
@@ -20,13 +19,15 @@ fileName = "conv_box_spike"+".gif";
 
 dt = 0.001;
 t = -2.1 : dt : 4;
-F1 = exp(-t);
-F1(t<0) = 0;
-F2 = abs(t)<=0.5;
+func_x = exp(-t);
+func_x(t<0) = 0;
+func_h = abs(t)<=0.5;
 
 fig = figure; % New figure ensures it is on top so the animation is visible during rendering.
 width = 1920; % Appropriate GIF rendering size (HD video)
 height = 1080;
+width = 1024;
+height = 768;
 fig.Position = [1 1 width height]; % LL of primary monitor; doesn't avoid GUI at bottom (e.g., Windows interface).
 % Doesn't check that (scaled) monitor is large enough)
 
@@ -42,22 +43,21 @@ integral = nan(size(t));
 for offset_i = 1:length(t)
     offset = t(offset_i);
     shift = offset_i-zero_offset;
-    F2_shifted = circshift(F2, [0 shift]);
-    product = F2_shifted.*F1;
+    func_h_shifted = circshift(func_h, [0 shift]);
+    product = func_h_shifted.*func_x;
     integral(offset_i) = sum(product)/length(t)*(t(end)-t(1));
 
     if offset_i==SyncFrames(frame)
         area(t, product, 'facecolor', 'yellow');
         hold on
-        plot(t, F1, 'b', t, F2_shifted, 'r', t, integral, 'k', [offset offset], [0 2], 'k:')
+        plot(t, func_x, 'b', t, func_h_shifted, 'r', t, integral, 'k', [offset offset], [0 2], 'k:')
         hold off
         axis image
         axis([-1.6 3.1 0 1.1])
         xlabel('\tau & t')
         grid on
-        legend('Area under f(\tau)g(t-\tau)', 'f(\tau)', 'g(t-\tau)', '(f\astg)(t)')
-        frame_image = frame2im(getframe(gcf));
-        frame_anim(:,:,:,frame) = frame_image;
+        legend('Area under x(\tau)h(t-\tau)', 'x(\tau)', 'h(t-\tau)', '(x\asth)(t)')
+        frame_anim(:,:,:,frame) = frame2im(getframe(gcf));
         frame = frame+1;
     end
 end
