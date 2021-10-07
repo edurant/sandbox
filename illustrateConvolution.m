@@ -7,29 +7,36 @@
 
 % TODO:
 % Option to disable GIF generation (when live render is all that is needed)
-% Change function notation to standard EE signals notation (and MSOE EE3032)
+% Change function notation to standard EE signals notation (and MSOE EE3032, g->h, f->x)
 % Support other functions / time supports
+% Try GIF without dither
 % Increase GIF render RAM efficiency (about 6 GB peak, rendering raw 24b video to RAM)
 % Increase GIF efficiency/compression/cmap depth (32 MB GIF typical render)
+% Better handling if size larger than primary monitor is selected (currently size mismatch error)
 
 function illustrateConvolution()
 
 fileName = "conv_box_spike"+".gif";
 
-t = -2.1 : 0.001 : 4;
+dt = 0.001;
+t = -2.1 : dt : 4;
 F1 = exp(-t);
 F1(t<0) = 0;
 F2 = abs(t)<=0.5;
 
 fig = figure; % New figure ensures it is on top so the animation is visible during rendering.
-% TODO: Define width height as variables here, prealloc frame_anim
-fig.Position = [1 1 1920 1080]; % LL of primary monitor; doesn't avoid GUI at bottom (e.g., Windows interface).
-% Appropriate GIF rendering size (HD video); doesn't check that (scaled) monitor is large enough)
+width = 1920; % Appropriate GIF rendering size (HD video)
+height = 1080;
+fig.Position = [1 1 width height]; % LL of primary monitor; doesn't avoid GUI at bottom (e.g., Windows interface).
+% Doesn't check that (scaled) monitor is large enough)
 
 [~, zero_offset] = min(abs(t));
 
-frameRate = 20.3366666; % hard-coded constant without explanation in original
-SyncFrames = [1 round(frameRate*(1:length(t)))]; % TODO: This is much longer than needed, which makes using its length for alloc frame_image below wasteful. should it be based on duration of t (not samples of t)?
+frameRate = 20.3366666; % Samples of t before a video frame is rendered (video display rate is separate)
+frameCount = floor((t(end)-t(1))/dt / frameRate) + 1; % we only need frame if we reach end of frame; +1 for edges in discrete count
+SyncFrames = round(frameRate*(0:round(frameCount)))+1; % indexes in t where a frame is rendered; 1 extra since we need to check if we've reached next sync in terminal dropped frames
+frame_anim = zeros(height, width, 3, frameCount, 'uint8'); % HWCN, alloc
+
 frame = 1;
 integral = nan(size(t));
 for offset_i = 1:length(t)
@@ -40,7 +47,6 @@ for offset_i = 1:length(t)
     integral(offset_i) = sum(product)/length(t)*(t(end)-t(1));
 
     if offset_i==SyncFrames(frame)
-        frame = frame+1; % TODO: Bug? frame always >= 2
         area(t, product, 'facecolor', 'yellow');
         hold on
         plot(t, F1, 'b', t, F2_shifted, 'r', t, integral, 'k', [offset offset], [0 2], 'k:')
@@ -51,12 +57,8 @@ for offset_i = 1:length(t)
         grid on
         legend('Area under f(\tau)g(t-\tau)', 'f(\tau)', 'g(t-\tau)', '(f\astg)(t)')
         frame_image = frame2im(getframe(gcf));
-        if frame == 1 % FIXME: This alloc code never runs, frame >= 2; so frame_anim grows dynamically, resulting in noticable alloc pauses in live render
-            [H,W] = size(frame_image);
-            frame_anim = NaN(H,W,3,length(SyncFrames)); % HWCN
-            % FIXME: frame_image is uint8, so can't use NaN
-        end
         frame_anim(:,:,:,frame) = frame_image;
+        frame = frame+1;
     end
 end
 
@@ -66,6 +68,6 @@ sz = size(frame_anim); % HWNC
 sz(4) = 1; % C = 1
 frame_anim_idx = permute(reshape(frame_anim_idx, sz), [1 2 4 3]); % H(WN)C -> HWNC -> HWCN
 
-imwrite(frame_anim_idx, cmap, fileName, 'gif', 'Loopcount', inf, 'DelayTime', 1/frameRate)
+imwrite(frame_anim_idx, cmap, fileName, 'gif', 'Loopcount', inf, 'DelayTime', 1/frameRate) % TODO: reasonable frameRate, but based on function dt, not display rate, see definition.
 
 end % function
