@@ -5,7 +5,7 @@
 % https://commons.wikimedia.org/wiki/File:Convolution_of_spiky_function_with_box2.gif
 
 % TODO:
-% Support other functions / time supports
+% Support other functions (function calculation objects) / time supports
 % Option to disable video generation when live render is all that is needed (saves huge amount of RAM)
 % Better handling if size larger than primary monitor is selected (currently size mismatch error)
 
@@ -18,9 +18,23 @@ set(0, 'DefaultLineLineWidth', 1.0)
 
 dt = 0.001;
 t = -2.1 : dt : 4;
-func_x = exp(-t);
-func_x(t<0) = 0;
-func_h = abs(t)<=0.5;
+
+if true % original functions
+    vals_x = exp(-t);
+    vals_x(t<0) = 0;
+    vals_h = abs(t)<=0.5;
+else % another set of functions to try. This works but updates needed to get less time truncation and moving folding further away from caller.
+    % x is a triangular pulse from 0 to 2 s...
+    vals_x = zeros(size(t));
+    r1 = 0<=t & t<=1;
+    vals_x(r1) = t(r1);
+    r2 = 1<=t & t<=2;
+    vals_x(r2) = 2-t(r2);
+    % h(t) = e^-t u(t), but func_h = e^t u(-t) (the *time-reversed* impulse response)
+    vals_h = zeros(size(t));
+    r3 = t<=0;
+    vals_h(r3) = exp(t(r3));
+end
 
 fig = figure; % New figure ensures it is on top so the animation is visible during rendering.
 width = 1920; % Appropriate GIF rendering size (HD video)
@@ -38,15 +52,14 @@ frame = 1;
 integral = nan(size(t));
 for offset_i = 1:length(t)
     offset = t(offset_i);
-    shift = offset_i-zero_offset;
-    func_h_shifted = circshift(func_h, [0 shift]);
-    product = func_h_shifted.*func_x;
+    vals_h_shifted = shift(vals_h, offset_i-zero_offset);
+    product = vals_h_shifted.*vals_x;
     integral(offset_i) = sum(product)/length(t)*(t(end)-t(1));
 
     if offset_i==syncFrames(frame)
         area(t, product, 'facecolor', 'yellow');
         hold on
-        plot(t, func_x, 'b', t, func_h_shifted, 'r', t, integral, 'k', [offset offset], [0 2], 'k:')
+        plot(t, vals_x, 'b', t, vals_h_shifted, 'r', t, integral, 'k', [offset offset], [0 2], 'k:')
         hold off
         axis image
         axis([-1.6 3.1 0 1.1])
@@ -61,6 +74,23 @@ end
 renderMPEG4(frame_anim, basename)
 % renderAnimatedGif(frame_anim, basename)
 
+end % function
+
+function vec = shift(vec, offset)
+% Shifts a 1-D vector by offset places; pads with 0.
+assert(max(size(vec))==numel(vec), 'vec must be a 1-D vector (with any number of singleton dimensions)')
+if abs(offset) > length(vec)
+    vec = zeros(size(vec),'like',vec);
+elseif offset==0
+    return
+else
+    if offset>0
+        result = [zeros(1,offset,'like',vec) vec(1:end-offset)];
+    else
+        result = [vec(1-offset:end) zeros(1,-offset,'like',vec)];
+    end
+    vec = reshape(result,size(vec));
+end
 end % function
 
 function renderAnimatedGif(frame_anim, basename)
