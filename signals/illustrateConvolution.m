@@ -6,7 +6,6 @@
 
 % TODO:
 % Option to start (and maybe stop) video after (before) the calculation extents
-% Option to disable video generation when live render is all that is needed (saves huge amount of RAM)
 % Better handling if size larger than primary monitor is selected (currently size mismatch error)
 
 function illustrateConvolution(fh, fx, ct, pt)
@@ -24,10 +23,8 @@ function illustrateConvolution(fh, fx, ct, pt)
 narginchk(0,4)
 assert (nargin ~= 1, "if h(t) is provided, x(t) must also be provided.")
 
-basename = "conv";
-
-set(0, 'DefaultAxesFontSize', 15)
-set(0, 'DefaultLineLineWidth', 1.0)
+set(0, 'DefaultAxesFontSize', 15, ...
+       'DefaultLineLineWidth', 1.0)
 
 if ~exist('ct', 'var'), ct = [-2.1 4.0]; end
 if ~exist('pt', 'var'), pt = [-1.6 3.1]; end
@@ -54,10 +51,10 @@ fig.Position = [1 1 width height]; % LL of primary monitor; doesn't avoid GUI at
 [~, zero_offset] = min(abs(t));
 
 frameRate = 20.3366666; % Samples of t between rendering video frames (video display rate is separate)
-frameCount = floor((diff(ct))/dt / frameRate) + 1; % we only need frame if we reach end of frame; +1 for edges in discrete count
-frame_anim = zeros(height, width, 3, frameCount, 'uint8'); % HWCN, alloc
 
-frame = 1;
+vw = VideoWriter("conv",'MPEG-4');
+open(vw)
+
 accumulatedFrames = frameRate; % initialize so that initial frame is rendered
 integral = nan(size(t));
 for offset_i = 1:length(t)
@@ -77,14 +74,12 @@ for offset_i = 1:length(t)
         xlabel('\tau and t')
         grid on
         legend('Area under x(\tau)h(t-\tau)', 'x(\tau)', 'h(t-\tau)', '(x\asth)(t)')
-        frame_anim(:,:,:,frame) = frame2im(getframe(gcf));
-        frame = frame+1;
+        writeVideo(vw, frame2im(getframe(gcf)))
     end
     accumulatedFrames = accumulatedFrames + 1;
 end
 
-renderMPEG4(frame_anim, basename)
-% renderAnimatedGif(frame_anim, basename)
+close(vw)
 
 end % function
 
@@ -104,21 +99,3 @@ else
     vec = reshape(result,size(vec));
 end
 end % function
-
-function renderAnimatedGif(frame_anim, basename)
-% frame_anim must be HWCN
-frame_anim = permute(frame_anim, [1 2 4 3]);
-sz = size(frame_anim); % HWNC
-[frame_anim_idx, cmap] = rgb2ind(reshape(frame_anim, sz(1), [], 3), 256); % collapse (WN) for rgb2ind
-sz(4) = 1; % C = 1
-frame_anim_idx = permute(reshape(frame_anim_idx, sz), [1 2 4 3]); % H(WN)C -> HWNC -> HWCN
-imwrite(frame_anim_idx, cmap, basename+".gif", 'gif', 'Loopcount', inf, 'DelayTime', 1/30)
-% 30 Hz is a bit slow, but animated GIFs are already huge
-end % function
-
-function renderMPEG4(frame_anim, basename)
-v = VideoWriter(basename,'MPEG-4');
-open(v)
-writeVideo(v, frame_anim)
-close(v)
-end
