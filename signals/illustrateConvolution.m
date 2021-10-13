@@ -5,22 +5,22 @@
 % https://commons.wikimedia.org/wiki/File:Convolution_of_spiky_function_with_box2.gif
 
 % TODO:
-% Option to start (and maybe stop) video after (before) the calculation extents
 % Better handling if size larger than primary monitor is selected (currently size mismatch error)
 
-function illustrateConvolution(fh, fx, ct, pt)
+function illustrateConvolution(fh, fx, ct, pt, vt)
 % fh, fx: function handles taking t of any shape and returning corresponding function values
 % ct, pt, ordered, 2-element time support vectors.
-% There are 2 time ranges:
+% There are 3 time ranges:
 % 1. ct: calculation time range. x(tau), h(-tau), and y(t) are calculated on this
 %    range and assumed to be 0 outside of this range.
 %    Also, the animation runs over this range sweeping t in h(t-tau).
-% 2. pt: plotting time range, typically a subset of calculation time range.
+% 2. pt: plotting time range, typically a subset of ct.
+% 3. vt: video time range, typically a subset of ct and often a superset of pt
 %
 % This system will require some compromises depending on the particular
 % signals used. Additional capabilities could be added.
 
-narginchk(0,4)
+narginchk(0,5)
 assert (nargin ~= 1, "if h(t) is provided, x(t) must also be provided.")
 
 set(0, 'DefaultAxesFontSize', 15, ...
@@ -30,6 +30,8 @@ if ~exist('ct', 'var'), ct = [-2.1 4.0]; end
 if ~exist('pt', 'var'), pt = [-1.6 3.1]; end
 assert(numel(ct)==2), assert(diff(ct)>0)
 assert(numel(pt)==2), assert(diff(pt)>0)
+if ~exist('vt', 'var'), vt = pt; end
+assert(numel(vt)==2), assert(diff(vt)>0)
 
 dt = 0.001;
 t = ct(1) : dt : ct(2);
@@ -50,12 +52,13 @@ fig.Position = [1 1 width height]; % LL of primary monitor; doesn't avoid GUI at
 
 [~, zero_offset] = min(abs(t));
 
-frameRate = 20.3366666; % Samples of t between rendering video frames (video display rate is separate)
+frameRate = 10.1; % Samples of t between rendering video frames (video display rate is separate)
 
-vw = VideoWriter("conv",'MPEG-4');
+vw = VideoWriter("conv", "MPEG-4");
+vw.FrameRate = 60;
 open(vw)
 
-accumulatedFrames = frameRate; % initialize so that initial frame is rendered
+accumulatedFrames = frameRate; % initialize so that initial frame in vt is rendered
 integral = nan(size(t));
 for offset_i = 1:length(t)
     offset = t(offset_i);
@@ -63,20 +66,22 @@ for offset_i = 1:length(t)
     product = vals_h_shifted.*vals_x;
     integral(offset_i) = sum(product)/length(t)*(diff(ct));
 
-    if accumulatedFrames + 0.5 >= frameRate % emit a frame
-        accumulatedFrames = accumulatedFrames - frameRate;
-        area(t, product, 'facecolor', 'yellow');
-        hold on
-        plot(t, vals_x, 'b', t, vals_h_shifted, 'r', t, integral, 'k', [offset offset], [0 2], 'k:')
-        hold off
-        axis image
-        axis([pt(1) pt(2) 0 1.1])
-        xlabel('\tau and t')
-        grid on
-        legend('Area under x(\tau)h(t-\tau)', 'x(\tau)', 'h(t-\tau)', '(x\asth)(t)')
-        writeVideo(vw, frame2im(getframe(gcf)))
+    if vt(1) <= offset && offset <= vt(2)
+        if accumulatedFrames + 0.5 >= frameRate % emit a frame
+            accumulatedFrames = accumulatedFrames - frameRate;
+            area(t, product, 'facecolor', 'yellow');
+            hold on
+            plot(t, vals_x, 'b', t, vals_h_shifted, 'r', t, integral, 'k', [offset offset], [0 2], 'k:')
+            hold off
+            axis image
+            axis([pt(1) pt(2) 0 1.1])
+            xlabel('\tau and t')
+            grid on
+            legend('Area under x(\tau)h(t-\tau)', 'x(\tau)', 'h(t-\tau)', '(x\asth)(t)')
+            writeVideo(vw, frame2im(getframe(gcf)))
+        end
+        accumulatedFrames = accumulatedFrames + 1;
     end
-    accumulatedFrames = accumulatedFrames + 1;
 end
 
 close(vw)
