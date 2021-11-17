@@ -5,12 +5,12 @@
 % https://commons.wikimedia.org/wiki/File:Convolution_of_spiky_function_with_box2.gif
 
 % TODO:
+% Add areas and demonstrate area property
 % Better handling if size larger than primary monitor is selected (currently size mismatch error)
 
 function illustrateConvolution(fh, fx, ct, pt, vt)
 % fh, fx: function handles taking t of any shape and returning corresponding function values
-% ct, pt, ordered, 2-element time support vectors.
-% There are 3 time ranges:
+% ct, pt, vt: ordered, 2-element time range vectors.
 % 1. ct: calculation time range. x(tau), h(-tau), and y(t) are calculated on this
 %    range and assumed to be 0 outside of this range.
 %    Also, the animation runs over this range sweeping t in h(t-tau).
@@ -45,6 +45,8 @@ else
     vals_h = fh(-t); % h(t-tau), t=0 case; shifts happen below
 end
 
+ylim_max = max([max(vals_x) max(vals_h)])*1.1; % TODO: consider y, consider outliers
+
 fig = figure; % New figure ensures it is on top so the animation is visible during rendering.
 width = 1920; % Appropriate GIF rendering size (HD video)
 height = 1080;
@@ -74,7 +76,7 @@ for offset_i = 1:length(t)
             plot(t, vals_x, 'b', t, vals_h_shifted, 'r', t, integral, 'k', [offset offset], [0 2], 'k:')
             hold off
             axis image
-            axis([pt(1) pt(2) 0 1.1])
+            axis([pt(1) pt(2) 0 ylim_max])
             xlabel('\tau and t')
             grid on
             legend('Area under x(\tau)h(t-\tau)', 'x(\tau)', 'h(t-\tau)', '(x\asth)(t)')
