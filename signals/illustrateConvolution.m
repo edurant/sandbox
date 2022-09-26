@@ -45,7 +45,8 @@ else
     vals_h = fh(-t); % h(t-tau), t=0 case; shifts happen below
 end
 
-ylim_max = max([max(vals_x) max(vals_h)])*1.1; % TODO: consider y, consider outliers
+ylim_max = max([max(vals_x), max(vals_h), max(vals_x)*max(vals_h)])*1.1;
+% TODO: consider max area, consider outliers
 
 fig = figure; % New figure ensures it is on top so the animation is visible during rendering.
 width = 1920; % Appropriate GIF rendering size (HD video)

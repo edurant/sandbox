@@ -2,7 +2,7 @@ fh = @(t)one_sided_exp_decay(t,2);
 fh = @(t)(2*fh(t)); % scale vertically by 2
 
 % fx = @triangular_pulse;
-fx = @(t)rectangular_pulse(t,[-2 1]);
+fx = @(t)(1.5*rectangular_pulse(t,[-2 1]));
 
 % calculation, plotting, video
 ct = [-4 4.1];
