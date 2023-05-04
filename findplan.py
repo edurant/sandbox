@@ -20,6 +20,10 @@ def main(args):
     data_frame['mtime'] = pd.to_datetime([os.path.getmtime(pth) for pth in found_plan], unit='s')
     data_frame.sort_values(by=['mtime'])
 
+    if data_frame.empty:
+        print('No plans found, exiting...')
+        return -1
+
     print(data_frame)
 
     idx = int(input("Selection? ")) # TODO: Validate type & range
