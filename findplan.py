@@ -6,6 +6,7 @@
 import os
 import argparse
 from glob import glob
+import hashlib
 import pandas as pd
 import pyperclip
 #import webbrowser
@@ -17,18 +18,23 @@ def main(args):
         found_plan += glob(f'{pth}/**/{args.name}*.txt', recursive=True)
 
     data_frame = pd.DataFrame(found_plan, columns=['path'])
-    data_frame['mtime'] = pd.to_datetime([os.path.getmtime(pth) for pth in found_plan], unit='s')
+    data_frame['mtime'] = pd.to_datetime([int(os.path.getmtime(pth)) for pth in found_plan],
+        unit='s') # int truncates to whole seconds
+    data_frame['md5'] = ['…'+hashlib.md5(open(pth,'rb').read()).hexdigest()[-4:]
+        for pth in found_plan]
+
     data_frame.sort_values(by=['mtime'])
 
     if data_frame.empty:
         print('No plans found, exiting...')
         return -1
 
+    pd.options.display.max_colwidth = None
     print(data_frame)
 
     idx = int(input("Selection? ")) # TODO: Validate type & range
     selected_plan = data_frame.iloc[idx].path
-    #pd.set_option('display.max_colwidth', None) # FIXME: Why is this having no effect?
+
     print(selected_plan)
     pyperclip.copy(selected_plan)
     print('Filename copied to clipboard')
