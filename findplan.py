@@ -23,6 +23,7 @@ def main(args):
     data_frame['md5'] = ['…'+hashlib.md5(open(pth,'rb').read()).hexdigest()[-4:]
         for pth in found_plan]
 
+    # FIXME: This sort isn't working correctly; times often appear out of order.
     data_frame.sort_values(by=['mtime'])
 
     if data_frame.empty:
@@ -50,6 +51,8 @@ if __name__ == "__main__":
         ['Box', 'EECS Faculty and Staff', 'Advising Plans'], # writable
         ['Dropbox', 'msoe', 'misc', 'advising', 'specificStudents', 'plans'] # local
     ]
+    #    ['Box', 'EECS-Transition', '_Course-Histories'], # not plan, use to make new plan
+
     parser = argparse.ArgumentParser(description=__doc__,
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument('name', type=str, help='LastName | LastName_FirstName')
