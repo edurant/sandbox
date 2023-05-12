@@ -9,7 +9,6 @@ from glob import glob
 import hashlib
 import pandas as pd
 import pyperclip
-#import webbrowser
 
 def main(args):
     """Find all matching advising plans, sort by date, copy user selection to clipboard"""
@@ -23,8 +22,7 @@ def main(args):
     data_frame['md5'] = ['…'+hashlib.md5(open(pth,'rb').read()).hexdigest()[-4:]
         for pth in found_plan]
 
-    # FIXME: This sort isn't working correctly; times often appear out of order.
-    data_frame.sort_values(by=['mtime'])
+    data_frame = data_frame.sort_values(by=['mtime'], ascending=False)
 
     if data_frame.empty:
         print('No plans found, exiting...')
@@ -40,9 +38,7 @@ def main(args):
     pyperclip.copy(selected_plan)
     print('Filename copied to clipboard')
 
-    # Pushing the filename into the STAT webapp isn't functional.
-    #html_file_path = os.path.abspath("findplan-bridge.html")
-    #webbrowser.open(f"file://{html_file_path}?filename={selected_plan}")
+    return 0
 
 if __name__ == "__main__":
     # execute only if run as a script
