@@ -22,7 +22,7 @@ def main(args):
     data_frame['md5'] = ['…'+hashlib.md5(open(pth,'rb').read()).hexdigest()[-4:]
         for pth in found_plan]
 
-    data_frame = data_frame.sort_values(by=['mtime'], ascending=False)
+    data_frame = data_frame.sort_values(by=['mtime'], ascending=False, ignore_index=True)
 
     if data_frame.empty:
         print('No plans found, exiting...')
