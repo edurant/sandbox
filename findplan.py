@@ -19,8 +19,10 @@ def main(args):
     data_frame = pd.DataFrame(found_plan, columns=['path'])
     data_frame['mtime'] = pd.to_datetime([int(os.path.getmtime(pth)) for pth in found_plan],
         unit='s') # int truncates to whole seconds
-    data_frame['md5'] = ['…'+hashlib.md5(open(pth,'rb').read()).hexdigest()[-4:]
+    data_frame['sha224'] = ['…'+hashlib.sha224(open(pth,'rb').read()).hexdigest()[-4:]
         for pth in found_plan]
+    # data_frame['sha224'] = ['…'+hashlib.file_digest(open(pth,'rb'), "sha224")
+    #     .hexdigest()[-4:] for pth in found_plan] # file_digest new in python 3.11
 
     data_frame = data_frame.sort_values(by=['mtime'], ascending=False, ignore_index=True)
 
@@ -51,7 +53,7 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(description=__doc__,
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    parser.add_argument('name', type=str, help='LastName | LastName_FirstName')
+    parser.add_argument('name', type=str, help='LastName | LastName_FirstInit | LastName_FirstName')
     parser.add_argument('-d', '--directory', type=str,
         default=[os.path.join(os.path.expanduser("~"), *pth) for pth in plan_path],
         help='Directories to search')
