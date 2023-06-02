@@ -45,16 +45,18 @@ def main(args):
 if __name__ == "__main__":
     # execute only if run as a script
     plan_path = [
-        ['Box', 'EECS-Transition', '_Updated-Advising-Plans'], # read-only
-        ['Box', 'EECS Faculty and Staff', 'Advising Plans'], # writable
+        ['Box', 'EECS-Transition', '_Updated-Advising-Plans'], # PD read-only
+        ['Box', 'EECS Faculty and Staff', 'Advising Plans'], # PD writable
         ['Dropbox', 'msoe', 'misc', 'advising', 'specificStudents', 'plans'] # local
     ]
     #    ['Box', 'EECS-Transition', '_Course-Histories'], # not plan, use to make new plan
+    home_path = os.path.expanduser("~")
+    plan_path = [os.path.join(home_path, *pth) for pth in plan_path]
+    plan_path.extend(glob(os.path.join(home_path, "Box", "STAT-*/"))) # advisor-specific
 
     parser = argparse.ArgumentParser(description=__doc__,
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument('name', type=str, help='LastName | LastName_FirstInit | LastName_FirstName')
-    parser.add_argument('-d', '--directory', type=str,
-        default=[os.path.join(os.path.expanduser("~"), *pth) for pth in plan_path],
+    parser.add_argument('-d', '--directory', type=str, default=plan_path,
         help='Directories to search')
     main(parser.parse_args())
