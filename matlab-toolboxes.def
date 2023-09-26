@@ -1,0 +1,24 @@
+# MATLAB image with toolboxes for CSC5651, etc. Build with...
+# singularity build --fakeroot matlab-RELEASE-toolboxes.sif matlab-toolboxes.def
+
+Bootstrap: docker 
+From: nvcr.io/partners/matlab:r2023a
+
+%post
+
+apt-get update
+apt-get install --no-install-recommends --yes wget unzip ca-certificates nano
+apt-get clean
+apt-get autoremove
+rm -rf /var/lib/apt/lists/*
+
+cd /tmp
+wget -q https://www.mathworks.com/mpm/glnxa64/mpm \
+    && chmod +x mpm \
+    && EXISTING_MATLAB_LOCATION=$(dirname $(dirname $(readlink -f $(which matlab)))) \
+    && ./mpm install \
+        --destination=${EXISTING_MATLAB_LOCATION} \
+        --release=R2023a \
+        --products=DSP_System_Toolbox Audio_Toolbox \
+    || (echo "MPM Installation Failure. See below for more information:" && cat /tmp/mathworks_root.log && false) \
+    && rm -f mpm /tmp/mathworks_root.log
