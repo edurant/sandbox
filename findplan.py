@@ -14,7 +14,10 @@ def main(args):
     """Find all matching advising plans, sort by date, copy user selection to clipboard"""
     found_plan = []
     for pth in args.directory:
-        found_plan += glob(f'{pth}/**/{args.name}*.txt', recursive=True)
+        if os.path.isdir(pth):
+            found_plan += glob(f'{pth}/**/{args.name}*.txt', recursive=True)
+        else:
+            warn(f"Directory not found: {pth}")
 
     data_frame = pd.DataFrame(found_plan, columns=['path'])
     data_frame['mtime'] = pd.to_datetime([int(os.path.getmtime(pth)) for pth in found_plan],
@@ -47,13 +50,14 @@ if __name__ == "__main__":
     plan_path = [
         ['Box', 'EECS-Transition', '_Updated-Advising-Plans'], # PD read-only
         ['Box', 'EECS Faculty and Staff', 'Advising Plans'], # PD writable
+        ['Box', 'EECS Advising Plans'], # all-advisor writable, PD readable
         ['Dropbox', 'msoe', 'misc', 'advising', 'specificStudents', 'plans'] # local
     ]
     #    ['Box', 'EECS-Transition', '_Course-Histories'], # not plan, use to make new plan
     home_path = os.path.expanduser("~")
     plan_path = [os.path.join(home_path, *pth) for pth in plan_path]
     plan_path.extend(glob(os.path.join(home_path, "Box", "STAT-*/"))) # advisor-specific
-
+    
     parser = argparse.ArgumentParser(description=__doc__,
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument('name', type=str, help='LastName | LastName_FirstInit | LastName_FirstName')
