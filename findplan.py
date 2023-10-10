@@ -6,6 +6,7 @@
 import os
 import argparse
 from glob import glob
+from warnings import warn
 import hashlib
 import pandas as pd
 import pyperclip
@@ -57,7 +58,7 @@ if __name__ == "__main__":
     home_path = os.path.expanduser("~")
     plan_path = [os.path.join(home_path, *pth) for pth in plan_path]
     plan_path.extend(glob(os.path.join(home_path, "Box", "STAT-*/"))) # advisor-specific
-    
+
     parser = argparse.ArgumentParser(description=__doc__,
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument('name', type=str, help='LastName | LastName_FirstInit | LastName_FirstName')
