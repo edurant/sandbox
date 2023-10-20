@@ -13,21 +13,24 @@ import pyperclip
 
 def main(args):
     """Find all matching advising plans, sort by date, copy user selection to clipboard"""
+    # Build the list of plans
     found_plan = []
     for pth in args.directory:
         if os.path.isdir(pth):
             found_plan += glob(f'{pth}/**/{args.name}*.txt', recursive=True)
         else:
             warn(f"Directory not found: {pth}")
+    found_plan = [p for p in found_plan if "courseHistories" not in p]
 
+    # Create DataFrame with all plan information
     data_frame = pd.DataFrame(found_plan, columns=['path'])
     data_frame['mtime'] = pd.to_datetime([int(os.path.getmtime(pth)) for pth in found_plan],
         unit='s') # int truncates to whole seconds
-    data_frame['sha224'] = ['…'+hashlib.sha224(open(pth,'rb').read()).hexdigest()[-4:]
-        for pth in found_plan]
-    # data_frame['sha224'] = ['…'+hashlib.file_digest(open(pth,'rb'), "sha224")
-    #     .hexdigest()[-4:] for pth in found_plan] # file_digest new in python 3.11
+    data_frame['sha224'] = ['…'+hashlib.file_digest(open(pth,'rb'), "sha224")
+        .hexdigest()[-4:] for pth in found_plan]
 
+    # Filter and sort
+    data_frame = data_frame.loc[data_frame.groupby('sha224')['mtime'].idxmin()] # oldest only
     data_frame = data_frame.sort_values(by=['mtime'], ascending=False, ignore_index=True)
 
     if data_frame.empty:
