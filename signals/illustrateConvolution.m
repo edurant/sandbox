@@ -20,30 +20,22 @@ function illustrateConvolution(fh, fx, ct, pt, vt)
 % This system will require some compromises depending on the particular
 % signals used. Additional capabilities could be added.
 
-narginchk(0,5)
-assert (nargin ~= 1, "if h(t) is provided, x(t) must also be provided.")
+arguments
+    fh (1,1) function_handle = @(t)abs(t)<=0.5; % rectangular pulse
+    fx (1,1) function_handle = @(t)exp(-t).*(t>=0); % causal exponential decay
+    ct (1,2) double {mustBeAscending} = [-2.1 4.0];
+    pt (1,2) double {mustBeAscending} = [-1.6 3.1];
+    vt (1,2) double {mustBeAscending} = pt;
+end
 
 set(0, 'DefaultAxesFontSize', 15, ...
        'DefaultLineLineWidth', 1.0)
 
-if ~exist('ct', 'var'), ct = [-2.1 4.0]; end
-if ~exist('pt', 'var'), pt = [-1.6 3.1]; end
-assert(numel(ct)==2), assert(diff(ct)>0)
-assert(numel(pt)==2), assert(diff(pt)>0)
-if ~exist('vt', 'var'), vt = pt; end
-assert(numel(vt)==2), assert(diff(vt)>0)
-
 dt = 0.001;
 t = ct(1) : dt : ct(2);
 
-if ~exist('fx', 'var')
-    vals_x = exp(-t); % causal exponential decay
-    vals_x(t<0) = 0;
-    vals_h = abs(t)<=0.5; % rectangular pulse
-else
-    vals_x = fx(t); % x(tau)
-    vals_h = fh(-t); % h(t-tau), t=0 case; shifts happen below
-end
+vals_x = fx(t); % x(tau)
+vals_h = fh(-t); % h(t-tau), t=0 case; shifts happen below
 
 ylim_max = max([max(vals_x), max(vals_h), max(vals_x)*max(vals_h)])*1.1;
 % TODO: consider max area, consider outliers
@@ -106,4 +98,11 @@ else
     end
     vec = reshape(result,size(vec));
 end
+end % function
+
+function mustBeAscending(t)
+    if diff(t)<=0
+        error('mustBeAscending:notAscending',...
+            'Input must be in strictly ascending order')
+    end
 end % function
