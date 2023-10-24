@@ -1,13 +1,13 @@
 # MATLAB image with toolboxes for CSC5651, etc. Build with...
 # singularity build --fakeroot matlab-RELEASE-toolboxes.sif matlab-toolboxes.def
 
-Bootstrap: docker 
+Bootstrap: docker
 From: nvcr.io/partners/matlab:r2023a
 
 %post
 
 apt-get update
-apt-get install --no-install-recommends --yes wget unzip ca-certificates nano
+apt-get install --no-install-recommends --yes wget unzip ca-certificates nano vim
 apt-get clean
 apt-get autoremove
 rm -rf /var/lib/apt/lists/*
