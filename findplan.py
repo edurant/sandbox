@@ -13,6 +13,8 @@ import pyperclip
 
 def ranged_input(upper_end):
     """Prompt the user until they enter an int between 0 and argument"""
+    if upper_end == 0:
+        return 0 # no need to prompt if there is only 1 option
     while True:
         user_input = input(f"Selection (0-{upper_end})? ")
         try:
