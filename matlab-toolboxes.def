@@ -1,6 +1,16 @@
 # MATLAB image with toolboxes for CSC5651, etc. Build with...
 # singularity build --fakeroot matlab-RELEASE-toolboxes.sif matlab-toolboxes.def
 
+# 2023-12-06: Latest 12-01 docker image is r2023b but has tag r2023a, hence differing nvcr and --release references
+
+# 2023-12-06: In the last month or so something upstream caused build to fail during apt-get,
+# prompting and locking during interactive tzdata configuration, which should be non-interactive.
+# Most likely in plugins-bad. Removing the following list fixed the build issue while still
+# allowing MATLAB .mp4 QuickTime decode. CLI decode to console
+# (gst-launch-1.0 playbin uri=file:///home/username/filename.mp4) also works, but can't actually
+# display decoded video, so the gtk package is probably the highest priority to restore.
+# gstreamer1.0-gtk3 gstreamer1.0-x gstreamer1.0-gl gstreamer1.0-pulseaudio gstreamer1.0-plugins-bad libgstreamer-plugins-bad1.0-dev gstreamer1.0-plugins-ugly
+
 Bootstrap: docker
 From: nvcr.io/partners/matlab:r2023a
 
@@ -8,7 +18,7 @@ From: nvcr.io/partners/matlab:r2023a
 
 apt-get update
 apt-get install --no-install-recommends --yes wget unzip ca-certificates nano vim ffmpeg
-apt-get install --no-install-recommends --yes libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev libgstreamer-plugins-bad1.0-dev gstreamer1.0-plugins-base gstreamer1.0-plugins-good gstreamer1.0-plugins-bad gstreamer1.0-plugins-ugly gstreamer1.0-libav gstreamer1.0-tools gstreamer1.0-x gstreamer1.0-alsa gstreamer1.0-gl gstreamer1.0-gtk3 gstreamer1.0-qt5 gstreamer1.0-pulseaudio
+apt-get install --no-install-recommends --yes libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev gstreamer1.0-plugins-base gstreamer1.0-libav gstreamer1.0-tools gstreamer1.0-qt5 gstreamer1.0-alsa gstreamer1.0-plugins-good
 apt-get clean
 apt-get autoremove
 rm -rf /var/lib/apt/lists/*
@@ -19,7 +29,7 @@ wget -q https://www.mathworks.com/mpm/glnxa64/mpm \
     && EXISTING_MATLAB_LOCATION=$(dirname $(dirname $(readlink -f $(which matlab)))) \
     && ./mpm install \
         --destination=${EXISTING_MATLAB_LOCATION} \
-        --release=R2023a \
-        --products=DSP_System_Toolbox Audio_Toolbox \
+        --release=R2023b \
+        --products=Audio_Toolbox DSP_System_Toolbox \
     || (echo "MPM Installation Failure. See below for more information:" && cat /tmp/mathworks_root.log && false) \
     && rm -f mpm /tmp/mathworks_root.log
