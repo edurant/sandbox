@@ -3,10 +3,9 @@
 
 """
 Extract a student's advising plan from XLSX master file.
-This is a development version that hasn't resolved OneDrive locking issues.
-TODO: CLI xcopy can read the OneDrive file, but shutil.copy fails to read it.
-Also, it contains some code used for parsing SO assessment files that may be
-useful as a baseline for parsing the advising master file.
+This is a development version with critical functionality not yet implemented.
+TODO: Also, this contains some code used for parsing SO assessment files that
+may be useful as a baseline for parsing the advising master file.
 """
 
 import os
@@ -29,10 +28,12 @@ def check_file_accessibility(filename):
         print(f"An unexpected error occurred: {e}")
         return False
 
-def create_local_copy(source_path, destination_path='temp.xlsx'):
+def create_local_copy(source_path, destination_path=os.path.join('.','temp.xlsx')):
     """ Create a local copy of the file. """
     try:
-        shutil.copy(source_path, destination_path)
+        # .copy and .copyfile fail to read when locked even though xcopy and .copy2 succeed
+        shutil.copy2(source_path, destination_path)
+        # TODO: Don't leave temp.xlsx in place when exiting
         return True
     except Exception as e:
         print(f"Error while creating a local copy: {e}")
@@ -50,6 +51,7 @@ OUTCOME_NUMBER = [re.compile(r"^\((\w+)\)"), # < AY20
 
 def get_pandas(ws):
     """Interpret an Excel worksheet as a pandas DataFrame, minding column headings, etc."""
+    # TODO: Determine whether using last name as index causes problems since last name isn't unique
     data = ws.values
     cols = next(data)[1:]
     data = list(data)
@@ -104,6 +106,8 @@ def main(args):
     ws = wb.active
 
     df = get_pandas(ws)
+
+    print(df) # debug
 
     #col_names = list(METADATA.keys())
     #col_names.extend(LEVEL)
