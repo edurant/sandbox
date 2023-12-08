@@ -3,24 +3,23 @@
 
 """
 Extract a student's advising plan from XLSX master file.
-This is a development version with critical functionality not yet implemented.
-TODO: Also, this contains some code used for parsing SO assessment files that
-may be useful as a baseline for parsing the advising master file.
+TODO: Check graduation requirements
 """
 
 import os
 import re
 import argparse
 import shutil
-from datetime import datetime
 from itertools import islice
+import pprint
+import numpy as np
 import pandas as pd
 import openpyxl
 
 def check_file_accessibility(filename):
     """ Check if the file is accessible for reading. """
     try:
-        with open(filename, 'r') as file:
+        with open(filename, 'rb'):
             return True
     except PermissionError:
         return False
@@ -39,19 +38,9 @@ def create_local_copy(source_path, destination_path=os.path.join('.','temp.xlsx'
         print(f"Error while creating a local copy: {e}")
         return False
 
-TIME_TAG = datetime.now().strftime('%G%m%dT%H%M%S') # used to tag artifacts created by this run
-
-METADATA = {'Program': 'C3', 'Course Number': 'C5', 'Quarter/Year': 'C7',
-    'Section': 'G5', 'Instructor': 'G7', 'Outcome': 'A10', 'Percent Proficient': 'B17'}
-LEVEL = ['Exemplary', 'Accomplished', 'Proficient', 'Developing', 'Beginning']
-
-# extract just outcome number from longer string
-OUTCOME_NUMBER = [re.compile(r"^\((\w+)\)"), # < AY20
-                  re.compile(r"^\[\w+\s(\d)\]")] # >= AY20
-
 def get_pandas(ws):
     """Interpret an Excel worksheet as a pandas DataFrame, minding column headings, etc."""
-    # TODO: Determine whether using last name as index causes problems since last name isn't unique
+    # TODO: Consider dropping historic students, or tagging them in output
     data = ws.values
     cols = next(data)[1:]
     data = list(data)
@@ -60,35 +49,36 @@ def get_pandas(ws):
     df = pd.DataFrame(data, index=idx, columns=cols)
     return df
 
-def get_so_data(full_path):
-    """Read summary SO assessment data from the given XLSX file"""
-    level_rows = [24, 28, 32, 36, 40]
-    level_cols = {'Level_str': 'D', 'Level_int': 'F', 'Count': 'G', 'Percentage': 'F'}
+TERMS = {1: 'Fall', 2: 'Spring', 3: 'Summer'}
 
-    workbook = openpyxl.load_workbook(full_path, data_only=True) # values, not formulas
-    sheet = workbook['Form']
-    assert sheet[level_cols['Level_str']+f'{level_rows[0]}'].value == LEVEL[0], \
-        'Unexpected format: did not find highest level description where expected'
+def semester_code_to_string(code):
+    """Convert a semester code like 1S24 to a description like Fall, '23"""
+    m = re.match(r'(\d)S(\d{2})', code)
+    sem, yr = [int(m.group(i)) for i in [1, 2]]
+    if sem == 0:
+        yr = yr - 1
+        sem = sem + len(TERMS)
+    elif sem == 1: # academic year to calendar year
+        yr = yr - 1
+    return f"{TERMS[sem]}, '{yr}"
 
-    data_values = []
-    for field, cell in METADATA.items():
-        value = sheet[cell].value
-        if field == 'Outcome':
-            for pattern in OUTCOME_NUMBER:
-                if result := pattern.match(value):
-                    value = result[1] # discard extra text; [0] is entire match
-                    break
-        data_values.append(value)
+def get_class_list(record):
+    """Given student record as pandas.Series, extract courses as dictionary of list per semester"""
 
-    for row in level_rows:
-        data_values.append(sheet[level_cols['Count']+f'{row}'].value)
+    matched_dict = {} # Create a dictionary to hold the matching elements
 
-    return data_values
+    # Iterate over the series and group values by matching labels
+    for label, value in record.items():
+        m = re.match(r'^(\dS\d{2}) ', label)
+        if m: # Is it a course?
+            label = semester_code_to_string(m.group(1))
+            if label not in matched_dict:
+                matched_dict[label] = []
+            matched_dict[label].append(value)
+    return matched_dict
 
 def main(args):
-    """Summarize MSOE EECS SO XLSX files recursively"""
-    all_data = []
-
+    """Find a specified student and summarize their record"""
     if check_file_accessibility(args.file):
         print("File is accessible for reading.")
     else:
@@ -107,13 +97,21 @@ def main(args):
 
     df = get_pandas(ws)
 
-    print(df) # debug
+    [ln, _, fn] = args.name.partition('_')
+    df = df.loc[[ln]]
+    if fn:
+        df = df[df['First Name'] == fn]
+    if df.shape[0] != 1:
+        print(f'{df.shape[0]} records matching {args.name}: {df['First Name'].tolist()}, exiting…')
+        return -1
 
-    #col_names = list(METADATA.keys())
-    #col_names.extend(LEVEL)
+    record = df.iloc[0]
+    record = record[record.notnull()]
+    record = record.transform(lambda c: int(c) if isinstance(c, np.float64) and c == int(c) else c)
+    print(record)
 
-    #dataframe = pd.DataFrame(all_data, columns=col_names)
-    #dataframe.to_excel(TIME_TAG+'.xlsx')
+    classes = get_class_list(record)
+    pprint.pprint(classes, sort_dicts=False)
 
 if __name__ == "__main__":
     # execute only if run as a script
@@ -122,7 +120,7 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(description=__doc__,
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    #parser.add_argument('-y', '--year', type=int, default=2020, help='4-digit academic year')
+    parser.add_argument('name', type=str, help='LastName (if unique) | LastName_FirstName')
     parser.add_argument('-f', '--file', type=str,
         default=os.path.join(os.path.expanduser("~"), *data_path),
         help='File to analyze')
