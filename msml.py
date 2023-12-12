@@ -3,7 +3,6 @@
 
 """
 Extract a student's advising plan from XLSX master file.
-TODO: Check graduation requirements
 """
 
 import os
@@ -77,6 +76,62 @@ def get_class_list(record):
             matched_dict[label].append(value)
     return matched_dict
 
+def make_electives_unique(li):
+    """Append sequential numbers to required electives so names are unique"""
+    j = 0 # elective number
+    for i, crs in enumerate(li):
+        if crs == "CSC5xxx":
+            j = j + 1
+            li[i] = crs + ' ' + str(j)
+
+def get_requirements(class_list, need_csc5610, need_mth5810):
+    """
+    Given dict of semester course plans and needed topic flags from admission
+    decision, provide a reconciliation of how and whether the degree
+    requirements are met.
+    """
+    requirements = ["CSC5201", "CSC6621", "CSC6605", "PHL6001", "CSC7901", "CSC5xxx"]
+    if need_csc5610:
+        requirements.insert(0,"CSC5610")
+    else:
+        requirements.append("CSC5xxx")
+    # Electives must be at end of requirements since greedy matching below
+    requirements.append("MTH5810" if need_mth5810 else "CSC5xxx")
+    make_electives_unique(requirements)
+
+    # Flatten the lists of classes into a single list
+    planned = [s for sublist in class_list.values() for s in sublist]
+
+    # handle special case CSC5201, which can be met by CSC5201, CSC6711, or CSC6712
+    csc5201 = ["CSC5201", "CSC6711", "CSC6712"]
+    reqs = {}
+    for opt in csc5201:
+        if opt in planned:
+            reqs["CSC5201"] = opt
+            requirements.remove("CSC5201")
+            planned.remove(opt)
+            break
+    for crs in requirements.copy():
+        if crs.startswith("CSC5xxx"):
+            for opt in planned:
+                if opt.startswith("CSC") and opt[3].isdigit() and int(opt[3]) >= 5:
+                    reqs[crs] = opt
+                    requirements.remove(crs)
+                    planned.remove(opt)
+                    break
+        else:
+            if crs in planned:
+                reqs[crs] = crs
+                requirements.remove(crs)
+                planned.remove(crs)
+    for crs in requirements: # no plan to meet remaining requirements
+        reqs[crs] = 'unplanned'
+    ex = 0
+    for opt in planned: # remaining planned courses don't meet a requirement
+        ex = ex + 1
+        reqs["Extra course " + str(ex)] = opt
+    return reqs
+
 def main(args):
     """Find a specified student and summarize their record"""
     if check_file_accessibility(args.file):
@@ -110,8 +165,15 @@ def main(args):
     record = record.transform(lambda c: int(c) if isinstance(c, np.float64) and c == int(c) else c)
     print(record)
 
+    print("\nAdvising Plan:")
     classes = get_class_list(record)
     pprint.pprint(classes, sort_dicts=False)
+
+    print("\nRequirements Check:")
+    reqs = get_requirements(classes, record['CSC5610 Needed?'], record['MTH5810 Needed?'])
+    pprint.pprint(reqs, sort_dicts=False)
+
+    return 0
 
 if __name__ == "__main__":
     # execute only if run as a script
