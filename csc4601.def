@@ -1,0 +1,14 @@
+# Image for CSC4601/5601 with NumPy, LaTeX, ...
+# Based on NGC PyTorch image
+# singularity build --fakeroot pytorch-xx.xx.sif csc4601.def
+
+Bootstrap: docker
+From: nvcr.io/nvidia/pytorch:23.12-py3
+# Checked 2024-01-02
+
+%post
+
+apt-get update
+apt-get install --no-install-recommends --yes vim
+apt-get clean
+apt-get autoremove
