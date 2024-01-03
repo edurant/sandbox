@@ -9,6 +9,6 @@ From: nvcr.io/nvidia/pytorch:23.12-py3
 %post
 
 apt-get update
-apt-get install --no-install-recommends --yes vim
+apt-get install --no-install-recommends --yes vim texlive-full
 apt-get clean
 apt-get autoremove
