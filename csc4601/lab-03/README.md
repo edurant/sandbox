@@ -1,5 +1,5 @@
 # Lab 3: Decision Boundaries
-## CSC 4601/5601 Thoery of Machine Learning
+## CSC 4601/5601 Theory of Machine Learning
 
 ### Learning Outcomes
   - Sketch or plot the decision boundaries for fitted models with 1 or 2 features
