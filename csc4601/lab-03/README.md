@@ -12,7 +12,12 @@
 ### Overview
 In this lab, you will explore how decision boundaries are used by machine learning methods to classify data.  We primarily draw on a popular machine learning data set called the Iris data set.  The author of the data set measured the sepal and petal widths and lengths of 150 flowers from three species.  The data set has four numerical independent variables and a single categorical dependent variable (species).
 
-### Note
+### Note on environment setup
+
+We need the scikit-learn package (note import name is sklearn), which wasn't used in previous labs. To install, execute the following *after* activating your csc4601 environment:
+    conda install scikit-learn
+
+### Note on scipy version
 
 For this lab, the provided class's implementation relies on an earlier version of scipy. If you have the latest version of scipy it will give you an error when running the provided code.
 
