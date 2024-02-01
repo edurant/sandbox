@@ -23,15 +23,15 @@ For this lab, the provided class's implementation relies on an earlier version o
 
 The issue is due to the encoding of the labels/responses as strings rather than numerical values.
 
-To work around this for this lab, you can use the following code prior to using the provided class:
+To work around this for this lab, you can use a [LabelEncoder](https://scikit-learn.org/stable/modules/generated/sklearn.preprocessing.LabelEncoder.html) as in the following code prior to using the provided class:
 
     from sklearn.preprocessing import LabelEncoder
     label_enc = LabelEncoder()
-    true_labels = df["label"].values
-    true_labels = label_enc.fit_transform(true_labels)
+    true_labels = df["label"].values # 2 unique string values
+    true_labels = label_enc.fit_transform(true_labels) # map to integers 0 and 1
     pred_labels = decision_boundaries.linear_decision_boundary_classifier(dec_bound_vec, features, true_labels, features)
-    pred_labels = label_enc.inverse_transform(pred_labels.astype(int))
-    true_labels = label_enc.inverse_transform(true_labels)
+    pred_labels = label_enc.inverse_transform(pred_labels.astype(int)) # float to int to original string label
+    true_labels = label_enc.inverse_transform(true_labels) # back to original string labels
 
 ### Instructions
 
