@@ -50,7 +50,7 @@ Note: in this experimental setup, the $x_{1}$ axis corresponds to horizontal and
 
     $w_{1}x_{1} + w_{2}x_{2} + w_{0} = 0$
 
-  - f. Import the linear_decision_boundary_classifier() function from the provided decision_boundaries.py file.  Call the function for each decision boundary like so:
+  - f. Import the linear_decision_boundary_classifier() function from the provided decision_boundaries.py file.  Call the function for each decision boundary like so. Note that weights of the input variables come first and the bias term comes last ($w_1, w_2, w_0$):
 
 `dec_bound_vec = np.array([0.75, -1.0, -0.9])`
 
