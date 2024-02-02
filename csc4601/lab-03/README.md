@@ -17,22 +17,6 @@ In this lab, you will explore how decision boundaries are used by machine learni
 We need the scikit-learn package (note import name is sklearn), which wasn't used in previous labs. To install, execute the following *after* activating your csc4601 environment:
     conda install scikit-learn
 
-### Note on scipy version
-
-For this lab, the provided class's implementation relies on an earlier version of scipy. If you have the latest version of scipy it will give you an error when running the provided code.
-
-The issue is due to the encoding of the labels/responses as strings rather than numerical values.
-
-To work around this for this lab, you can use a [LabelEncoder](https://scikit-learn.org/stable/modules/generated/sklearn.preprocessing.LabelEncoder.html) as in the following code prior to using the provided class:
-
-    from sklearn.preprocessing import LabelEncoder
-    label_enc = LabelEncoder()
-    true_labels = df["label"].values # 2 unique string values
-    true_labels = label_enc.fit_transform(true_labels) # map to integers 0 and 1
-    pred_labels = decision_boundaries.linear_decision_boundary_classifier(dec_bound_vec, features, true_labels, features)
-    pred_labels = label_enc.inverse_transform(pred_labels.astype(int)) # float to int to original string label
-    true_labels = label_enc.inverse_transform(true_labels) # back to original string labels
-
 ### Instructions
 
 ### __1.__ Decision boundaries and Evaluation of Model Predictions with Metrics
@@ -52,15 +36,18 @@ Note: in this experimental setup, the $x_{1}$ axis corresponds to horizontal and
 
   - f. Import the linear_decision_boundary_classifier() function from the provided decision_boundaries.py file.  Call the function for each decision boundary like so. Note that weights of the input variables come first and the bias term comes last ($w_1, w_2, w_0$):
 
-`dec_bound_vec = np.array([0.75, -1.0, -0.9])`
-
-`features = setosa_df[["sepal_length (cm)", "sepal_width (cm)"]].values`
-
-`true_labels = setosa_df["label"].values`
-
-`pred_labels = linear_decision_boundary_classifier(dec_bound_vec, features, true_labels, features)`
-
-`print(pred_labels)`
+        from sklearn.preprocessing import LabelEncoder
+        …
+        dec_bound_vec = np.array([0.75, -1.0, -0.9])
+        features = setosa_df[["sepal_length (cm)", "sepal_width (cm)"]].values
+        true_labels_values = setosa_df["label"].values # 2 unique string values
+        label_enc = LabelEncoder()
+        true_labels_ints = label_enc.fit_transform(true_labels_vals) # map to integers 0 and 1
+        pred_labels_ints = decision_boundaries.linear_decision_boundary_classifier(dec_bound_vec,
+            features, true_labels_ints, features)
+        # 2nd features argument *can* be a different set of features to classify
+        pred_labels_vals = label_enc.inverse_transform(pred_labels_ints.astype(int)) # float to int to original string label
+        print(pred_labels_vals) # or _ints
 
   - g. Use the scikit-learn sklearn.metrics.accuracy_score() function to calculate and print the accuracy of the predictions using each decision boundary using the true and predicted labels.
 
@@ -102,7 +89,7 @@ The best way to think of our data is that it is made of observations that are de
 
 We are going to look at an example that illustrates model overfitting and how evaluating the model on the training set can be deceptive.  We partitioned the setosa/non-setosa data set into three smaller data sets: training, testing, and validation.
 
-  - a. Create scatter plots of the validation, training, and testing data points (3 separate plots).  Put the sepal length on the horizontal axis, and the sepal width on the vertical axis. Color each point by its class (orange for setosa, blue for not setosa). Plot the with the following decision boundary on each plot.
+  - a. Create scatter plots of the validation, training, and testing data points (3 separate plots).  Put the sepal length on the horizontal axis, and the sepal width on the vertical axis. Color each point by its class (orange for setosa, blue for not setosa). Plot the with the following decision boundary on each plot. This decision boundary has been calculated to be a good match to the training data, but the validation and testing data were not considered when determining it.
 
     - _Decision Boundary (black):_ $x_{2} = 2x_{1} – 8$
 
