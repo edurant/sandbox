@@ -66,17 +66,7 @@ Note: in this experimental setup, the $x_{1}$ axis corresponds to horizontal and
 
     $w_{1}x_{1} + w_{2}x_{2} + w_{0} = 0$
 
-  - g. Import the linear_decision_boundary_classifier() function from the provided decision_boundaries.py file.  Call the function with each pair of features and its associated decision boundary like so:
-
-`dec_bound_vec = np.array([-0.7, -1.0, 7])`
-
-`features = setosa_df[["sepal_length (cm)", "sepal_width (cm)"]].values`
-
-`true_labels = setosa_df["label"].values`
-
-`pred_labels = linear_decision_boundary_classifier(dec_bound_vec, features, true_labels, features)`
-
-`print(pred_labels)`
+  - g. Import the linear_decision_boundary_classifier() function from the provided decision_boundaries.py file.  Call the function with each pair of features and its associated decision boundary.
 
   - h. Use the scikit-learn sklearn.metrics.accuracy_score() function to calculate and print the accuracy of the predictions using each decision boundary using the true and predicted labels.
 
