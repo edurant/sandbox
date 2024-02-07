@@ -164,12 +164,25 @@ def summarize_student(args, df):
 
     return 0
 
+def full_names(d):
+    """Given a DataFrame with first and last names, return a list of full names"""
+    return (d['First Name'] + ' ' + d['Last Name']).tolist()
+
 def summarize_course(args, df):
     """Given a course code, list MSML students planning to take it"""
 
+    # Drop summary and historic rows, keeping only the records of students who
+    # were or will actually be enrolled at some point in time. The first blank/None
+    # index value indicates the end of these students.
+    try:
+        none_index_pos = df.index.tolist().index(None)
+    except ValueError:
+        # If None is not in the index, use the length of the DataFrame
+        none_index_pos = len(df)
+    df = df.iloc[:none_index_pos]
+
     course_code = args.name
 
-    # Initialize an empty list to store the results
     results = []
 
     # Iterate over each column in the DataFrame
@@ -181,12 +194,14 @@ def summarize_course(args, df):
         # For each matching row, append a new row to the results list with the Last Name,
         # First Name, and the column name (which is the name of the term)
         for _, row in matching_rows.iterrows():
-            results.append({'Last Name': row.name, 'First Name': row['First Name'], 'Term': col})
+            results.append({'Last Name': row.name, 'First Name': row['First Name'],
+                'Term': col.split(' ', 1)[0]})
 
-    result_df = pd.DataFrame(results)
-    pprint.pprint(result_df, sort_dicts=False)
+    grouped = pd.DataFrame(results).groupby('Term', sort=False).apply(full_names).to_dict()
+    pprint.pprint(grouped, sort_dicts=False)
+    for k, v in grouped.items():
+        print(f"{k}: {len(v)} students")
 
-    # TODO: Group by term and summarize
     return 0
 
 def main(args):
