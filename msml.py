@@ -2,7 +2,10 @@
 # -*- coding: utf-8 -*-
 
 """
-Extract a student's advising plan from XLSX master file.
+Given the XLSX master file for MSML course planning, do one of the following:
+* Produce a student's advising plan
+* List students planning to take a given course code (MSML only, certificate
+  totals but not names tracked in source data)
 """
 
 import os
@@ -60,6 +63,10 @@ def semester_code_to_string(code):
     elif sem == 1: # academic year to calendar year
         yr = yr - 1
     return f"{TERMS[sem]}, '{yr}"
+
+def is_course_code(s):
+    """Return true if the given string is a valid course code"""
+    return bool(re.match(r'^[A-Za-z]{3}\d{4}$', s))
 
 def get_class_list(record):
     """Given student record as pandas.Series, extract courses as dictionary of list per semester"""
@@ -132,26 +139,8 @@ def get_requirements(class_list, need_csc5610, need_mth5810):
         reqs["Extra course " + str(ex)] = opt
     return reqs
 
-def main(args):
+def summarize_student(args, df):
     """Find a specified student and summarize their record"""
-    if check_file_accessibility(args.file):
-        print("File is accessible for reading.")
-    else:
-        print("File is not accessible. Assuming OneDrive lock.")
-        if create_local_copy(args.file):
-            print("Local copy created successfully.")
-            args.file = 'temp.xlsx'
-        else:
-            print("Failed to create a local copy. Cannot proceed.")
-            args.file = None
-            return -1
-
-    # Load the workbook and select the first worksheet
-    wb = openpyxl.load_workbook(args.file, data_only=True)
-    ws = wb.active
-
-    df = get_pandas(ws)
-
     [ln, _, fn] = args.name.partition('_')
     df = df.loc[[ln]]
     if fn:
@@ -175,6 +164,55 @@ def main(args):
 
     return 0
 
+def summarize_course(args, df):
+    """Given a course code, list MSML students planning to take it"""
+
+    course_code = args.name
+
+    # Initialize an empty list to store the results
+    results = []
+
+    # Iterate over each column in the DataFrame
+    # TODO: All column names that aren't a term should also be ignored to avoid spurious hits
+    for col in df.columns.drop(['First Name', 'MTH5810 Needed?']):
+        # Check if any cell in the column contains the string course_code
+        matching_rows = df[df[col].astype(str).str.contains(course_code, na=False)]
+
+        # For each matching row, append a new row to the results list with the Last Name,
+        # First Name, and the column name (which is the name of the term)
+        for _, row in matching_rows.iterrows():
+            results.append({'Last Name': row.name, 'First Name': row['First Name'], 'Term': col})
+
+    result_df = pd.DataFrame(results)
+    pprint.pprint(result_df, sort_dicts=False)
+
+    # TODO: Group by term and summarize
+    return 0
+
+def main(args):
+    """Perform actions requested by command line arguments"""
+    if check_file_accessibility(args.file):
+        print("File is accessible for reading.")
+    else:
+        print("File is not accessible. Assuming OneDrive lock.")
+        if create_local_copy(args.file):
+            print("Local copy created successfully.")
+            args.file = 'temp.xlsx'
+        else:
+            print("Failed to create a local copy. Cannot proceed.")
+            args.file = None
+            return -1
+
+    # Load the workbook and select the first worksheet
+    wb = openpyxl.load_workbook(args.file, data_only=True)
+    ws = wb.active
+
+    df = get_pandas(ws)
+
+    if is_course_code(args.name):
+        return summarize_course(args, df)
+    return summarize_student(args, df)
+
 if __name__ == "__main__":
     # execute only if run as a script
 
@@ -182,7 +220,8 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(description=__doc__,
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    parser.add_argument('name', type=str, help='LastName (if unique) | LastName_FirstName')
+    parser.add_argument('name', type=str,
+        help='LastName (if unique) | LastName_FirstName | CourseCode')
     parser.add_argument('-f', '--file', type=str,
         default=os.path.join(os.path.expanduser("~"), *data_path),
         help='File to analyze')
