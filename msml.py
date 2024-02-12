@@ -8,6 +8,8 @@ Given the XLSX master file for MSML course planning, do one of the following:
   totals but not names tracked in source data)
 """
 
+# TODO: Support LastName_FirstInitial
+
 import os
 import re
 import argparse
@@ -42,7 +44,6 @@ def create_local_copy(source_path, destination_path=os.path.join('.','temp.xlsx'
 
 def get_pandas(ws):
     """Interpret an Excel worksheet as a pandas DataFrame, minding column headings, etc."""
-    # TODO: Consider dropping historic students, or tagging them in output
     data = ws.values
     cols = next(data)[1:]
     data = list(data)
