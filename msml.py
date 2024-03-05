@@ -8,7 +8,9 @@ Given the XLSX master file for MSML course planning, do one of the following:
   totals but not names tracked in source data)
 """
 
-# TODO: Support LastName_FirstInitial
+# TODO:
+# Given a term, list all planned courses and course lists (not inc. certificate students)
+# Support LastName_FirstInitial
 
 import os
 import re
