@@ -69,7 +69,7 @@ def semester_code_to_string(code):
 
 def is_course_code(s):
     """Return true if the given string is a valid course code"""
-    return bool(re.match(r'^[A-Za-z]{3}\d{4}$', s))
+    return bool(re.match(r'^[A-Za-z]{3}[x\d]{4}$', s))
 
 def get_class_list(record):
     """Given student record as pandas.Series, extract courses as dictionary of list per semester"""
