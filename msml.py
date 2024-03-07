@@ -4,12 +4,12 @@
 """
 Given the XLSX master file for MSML course planning, do one of the following:
 * Produce a student's advising plan
-* List students planning to take a given course code (MSML only, certificate
-  totals but not names tracked in source data)
+* For named students (MSML, not certificates):
+  * Given a course code, list each term it is planned and who is taking it
+  * Given a term code, list each course that is planned and who is taking it
 """
 
 # TODO:
-# Given a term, list all planned courses and course lists (not inc. certificate students)
 # Support LastName_FirstInitial
 
 import os
@@ -70,6 +70,10 @@ def semester_code_to_string(code):
 def is_course_code(s):
     """Return true if the given string is a valid course code"""
     return bool(re.match(r'^[A-Za-z]{3}[x\d]{4}$', s))
+
+def is_term_code(s):
+    """Return true if the given string is a valid term code"""
+    return bool(re.match(r'^\dS[\d]{2}$', s))
 
 def get_class_list(record):
     """Given student record as pandas.Series, extract courses as dictionary of list per semester"""
@@ -184,15 +188,13 @@ def summarize_course(args, df):
         none_index_pos = len(df)
     df = df.iloc[:none_index_pos]
 
-    course_code = args.name
-
     results = []
 
     # Iterate over each column in the DataFrame
     # TODO: All column names that aren't a term should also be ignored to avoid spurious hits
     for col in df.columns.drop(['First Name', 'MTH5810 Needed?']):
-        # Check if any cell in the column contains the string course_code
-        matching_rows = df[df[col].astype(str).str.contains(course_code, na=False)]
+        # Check if any cell in the column contains the course code
+        matching_rows = df[df[col].astype(str).str.contains(args.name, na=False)]
 
         # For each matching row, append a new row to the results list with the Last Name,
         # First Name, and the column name (which is the name of the term)
@@ -202,6 +204,39 @@ def summarize_course(args, df):
 
     grouped = pd.DataFrame(results).groupby('Term', sort=False).apply(full_names).to_dict()
     pprint.pprint(grouped, sort_dicts=False)
+    for k, v in grouped.items():
+        print(f"{k}: {len(v)} students")
+
+    return 0
+
+def summarize_term(args, df):
+    """Given a term, list courses scheduled to run and students in each course"""
+
+    # Drop summary and historic rows, keeping only the records of students who
+    # were or will actually be enrolled at some point in time. The first blank/None
+    # index value indicates the end of these students.
+    try:
+        none_index_pos = df.index.tolist().index(None)
+    except ValueError:
+        # If None is not in the index, use the length of the DataFrame
+        none_index_pos = len(df)
+    df = df.iloc[:none_index_pos]
+
+    results = []
+
+    # Iterate over each column in the given term
+    for col in [f"{args.name} C{i}" for i in range(1, 4)]:
+        # Find non-blank cells
+        matching_rows = df[df[col].astype(str).str.strip() != '']
+        for _, row in matching_rows.iterrows():
+            results.append({'Last Name': row.name, 'First Name': row['First Name'],
+                'Course': row[col]})
+
+    grouped = pd.DataFrame(results)
+    grouped.sort_values(by=['Last Name', 'First Name'], inplace=True)
+    grouped = grouped.groupby('Course').apply(full_names).to_dict()
+
+    pprint.pprint(grouped)
     for k, v in grouped.items():
         print(f"{k}: {len(v)} students")
 
@@ -229,6 +264,8 @@ def main(args):
 
     if is_course_code(args.name):
         return summarize_course(args, df)
+    if is_term_code(args.name):
+        return summarize_term(args, df)
     return summarize_student(args, df)
 
 if __name__ == "__main__":
@@ -239,7 +276,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__,
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument('name', type=str,
-        help='LastName (if unique) | LastName_FirstName | CourseCode')
+        help='LastName (if unique) | LastName_FirstName | CourseCode | TermCode')
     parser.add_argument('-f', '--file', type=str,
         default=os.path.join(os.path.expanduser("~"), *data_path),
         help='File to analyze')
