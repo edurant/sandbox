@@ -227,13 +227,16 @@ def summarize_term(args, df):
     # Iterate over each column in the given term
     for col in [f"{args.name} C{i}" for i in range(1, 4)]:
         # Find non-blank cells
+        # TODO: The following line has a bug and keeps Course=None records. Patched up later.
         matching_rows = df[df[col].astype(str).str.strip() != '']
         for _, row in matching_rows.iterrows():
             results.append({'Last Name': row.name, 'First Name': row['First Name'],
                 'Course': row[col]})
 
     grouped = pd.DataFrame(results)
-    grouped.sort_values(by=['Last Name', 'First Name'], inplace=True)
+    grouped = grouped[grouped['Course'].notna()]
+    grouped.sort_values(by=['Course', 'Last Name', 'First Name'], inplace=True)
+    grouped.to_excel(args.name+".xlsx", index=False, sheet_name=args.name, freeze_panes=(1,0))
     grouped = grouped.groupby('Course').apply(full_names).to_dict()
 
     pprint.pprint(grouped)
