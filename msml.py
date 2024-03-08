@@ -177,24 +177,15 @@ def full_names(d):
 
 def summarize_course(args, df):
     """Given a course code, list MSML students planning to take it"""
-
-    # Drop summary and historic rows, keeping only the records of students who
-    # were or will actually be enrolled at some point in time. The first blank/None
-    # index value indicates the end of these students.
-    try:
-        none_index_pos = df.index.tolist().index(None)
-    except ValueError:
-        # If None is not in the index, use the length of the DataFrame
-        none_index_pos = len(df)
-    df = df.iloc[:none_index_pos]
-
     results = []
 
     # Iterate over each column in the DataFrame
     # TODO: All column names that aren't a term should also be ignored to avoid spurious hits
     for col in df.columns.drop(['First Name', 'MTH5810 Needed?']):
         # Check if any cell in the column contains the course code
+        # TODO: Debug the following since this matching approach was problematic in other functions
         matching_rows = df[df[col].astype(str).str.contains(args.name, na=False)]
+        #matching_rows = df[df[col].notna()] # TODO: Should work if we keep only the right columns
 
         # For each matching row, append a new row to the results list with the Last Name,
         # First Name, and the column name (which is the name of the term)
@@ -211,30 +202,16 @@ def summarize_course(args, df):
 
 def summarize_term(args, df):
     """Given a term, list courses scheduled to run and students in each course"""
-
-    # Drop summary and historic rows, keeping only the records of students who
-    # were or will actually be enrolled at some point in time. The first blank/None
-    # index value indicates the end of these students.
-    try:
-        none_index_pos = df.index.tolist().index(None)
-    except ValueError:
-        # If None is not in the index, use the length of the DataFrame
-        none_index_pos = len(df)
-    df = df.iloc[:none_index_pos]
-
     results = []
 
     # Iterate over each column in the given term
     for col in [f"{args.name} C{i}" for i in range(1, 4)]:
-        # Find non-blank cells
-        # TODO: The following line has a bug and keeps Course=None records. Patched up later.
-        matching_rows = df[df[col].astype(str).str.strip() != '']
+        matching_rows = df[df[col].notna()]
         for _, row in matching_rows.iterrows():
             results.append({'Last Name': row.name, 'First Name': row['First Name'],
                 'Course': row[col]})
 
     grouped = pd.DataFrame(results)
-    grouped = grouped[grouped['Course'].notna()]
     grouped.sort_values(by=['Course', 'Last Name', 'First Name'], inplace=True)
     grouped.to_excel(args.name+".xlsx", index=False, sheet_name=args.name, freeze_panes=(1,0))
     grouped = grouped.groupby('Course').apply(full_names).to_dict()
@@ -264,6 +241,16 @@ def main(args):
     ws = wb.active
 
     df = get_pandas(ws)
+
+    # Drop summary and historic rows, keeping only the records of students who
+    # were or will actually be enrolled at some point in time. The first blank/None
+    # index value indicates the end of these students.
+    try:
+        none_index_pos = df.index.tolist().index(None)
+    except ValueError:
+        # If None is not in the index, use the length of the DataFrame
+        none_index_pos = len(df)
+    df = df.iloc[:none_index_pos]
 
     if is_course_code(args.name):
         return summarize_course(args, df)
