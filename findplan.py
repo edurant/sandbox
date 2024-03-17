@@ -30,13 +30,15 @@ def file_sha224(pth):
     with open(pth, 'rb') as file:
         return hashlib.file_digest(file, "sha224").hexdigest()[-4:]
 
-def main(args):
-    """Find all matching advising plans, sort by date, copy user selection to clipboard"""
-    # Build the list of plans
+def get_plans(pths, student_name):
+    """
+    Recursively search all paths in pths for plans for student_name and return
+    DataFrame of unique plans found. Sorted with most recent mtime first.
+    """
     found_plan = []
-    for pth in args.directory:
+    for pth in pths:
         if os.path.isdir(pth):
-            found_plan += glob(f'{pth}/**/{args.name}*.txt', recursive=True)
+            found_plan += glob(f'{pth}/**/{student_name}*.txt', recursive=True)
         else:
             warn(f"Directory not found: {pth}")
     found_plan = [p for p in found_plan if "courseHistories" not in p]
@@ -51,6 +53,12 @@ def main(args):
     # Filter and sort
     data_frame = data_frame.loc[data_frame.groupby('sha224')['mtime'].idxmin()] # oldest only
     data_frame = data_frame.sort_values(by=['mtime'], ascending=False, ignore_index=True)
+
+    return data_frame
+
+def main(args):
+    """Find matching advising plans, copy user selection to clipboard"""
+    data_frame = get_plans(args.directory, args.name)
 
     if data_frame.empty:
         print('No plans found, exiting...')

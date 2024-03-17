@@ -16,11 +16,9 @@ import os
 import re
 import argparse
 import shutil
-from itertools import islice
 import pprint
 import numpy as np
 import pandas as pd
-import openpyxl
 
 def check_file_accessibility(filename):
     """ Check if the file is accessible for reading. """
@@ -43,16 +41,6 @@ def create_local_copy(source_path, destination_path=os.path.join('.','temp.xlsx'
     except Exception as e:
         print(f"Error while creating a local copy: {e}")
         return False
-
-def get_pandas(ws):
-    """Interpret an Excel worksheet as a pandas DataFrame, minding column headings, etc."""
-    data = ws.values
-    cols = next(data)[1:]
-    data = list(data)
-    idx = [r[0] for r in data]
-    data = (islice(r, 1, None) for r in data)
-    df = pd.DataFrame(data, index=idx, columns=cols)
-    return df
 
 TERMS = {1: 'Fall', 2: 'Spring', 3: 'Summer'}
 
@@ -158,7 +146,6 @@ def summarize_student(args, df):
 
     record = df.iloc[0]
     record = record[record.notnull()]
-    record = record.transform(lambda c: int(c) if isinstance(c, np.float64) and c == int(c) else c)
     print(record)
 
     print("\nAdvising Plan:")
@@ -236,21 +223,28 @@ def main(args):
             args.file = None
             return -1
 
-    # Load the workbook and select the first worksheet
-    wb = openpyxl.load_workbook(args.file, data_only=True)
-    ws = wb.active
+    # See https://github.com/pandas-dev/pandas/issues/45903 re loading bool as uint8
+    boolean_fields = ["Early Entry Originally", "BS Complete?", "GPA < 3",
+        "CSC5120 Needed?", "CSC5610 Needed?"]
+    # "MTH5810 Needed?" is detected as boolean; adding it to the above list causes conversion error
+    int32_fields = ["ID Number", "#≥6000 before BS", "# Assigned"]
+    df = pd.read_excel(args.file, index_col=0, dtype={
+        **{field: pd.UInt8Dtype() for field in boolean_fields},
+        **{field: pd.Int32Dtype() for field in int32_fields}
+    })
 
-    df = get_pandas(ws)
+    for field in boolean_fields:
+        df[field] = df[field].astype("boolean")
 
     # Drop summary and historic rows, keeping only the records of students who
     # were or will actually be enrolled at some point in time. The first blank/None
     # index value indicates the end of these students.
     try:
-        none_index_pos = df.index.tolist().index(None)
+        nan_index_pos = df.index.tolist().index(np.NaN)
+        df = df.iloc[:nan_index_pos]
     except ValueError:
-        # If None is not in the index, use the length of the DataFrame
-        none_index_pos = len(df)
-    df = df.iloc[:none_index_pos]
+        # Otherwise use the length of the DataFrame (e.g., if summary later removed)
+        pass
 
     if is_course_code(args.name):
         return summarize_course(args, df)
