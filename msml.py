@@ -17,6 +17,7 @@ import re
 import argparse
 import shutil
 import pprint
+from io import StringIO
 import numpy as np
 import pandas as pd
 from findplan import get_plans
@@ -135,6 +136,72 @@ def get_requirements(class_list, need_csc5610, need_mth5810):
         reqs["Extra course " + str(ex)] = opt
     return reqs
 
+def extract_and_remove_fields(df, fields):
+    """
+    Extracts fields with identical values and returns a dictionary of these values
+    and a DataFrame with the fields removed. Raises an error if any field does not
+    contain identical values for every record.
+
+    Parameters:
+    - df: Pandas DataFrame from which to extract fields.
+    - fields: List of field names to extract and remove.
+
+    Returns:
+    - A tuple containing:
+        1. A dictionary of field names with the associated identical value.
+        2. The DataFrame with specified fields removed.
+    """
+    field_values = {}
+    for field in fields:
+        if not df[field].nunique(dropna=False) == 1:
+            raise ValueError(f"Field '{field}' does not have identical values for every record.")
+        field_values[field] = df[field].iloc[0]
+
+    # Remove the specified fields from the DataFrame
+    df_reduced = df.drop(columns=fields)
+
+    return field_values, df_reduced
+
+def read_stat_plan(fn):
+    """Given the path to a STAT plan, extract information relevant to MSML"""
+
+    # TODO: Compute when the student will reach senior standing (90 credits)
+
+    # read_csv supports 1 comment character, but we have 2, so preprocess:
+    with open(fn, 'r') as file:
+        filtered_lines = [line for line in file if not line.strip().startswith(('<','>'))]
+    buffer = StringIO(''.join(filtered_lines)) # convert to file-like object
+
+    plan = pd.read_csv(buffer, sep='\t', skiprows=1, index_col=["Year", "Term"],
+        names=["ID", "Year", "Term", "Prefix_Number", "Credits", "Status", "Course Name",
+            "Last Name", "First Name", "Major", "Current Standing", "Email", "UNKNOWN 1", "Minor",
+            "UNKNOWN 2", "UNKNOWN 3", "UNKNOWN 4", "Advisor 1", "Advisor 2", "UNKNOWN 5",
+            "UNKNOWN 6", "Requirement"])
+
+    common_info, plan = extract_and_remove_fields(plan, ["ID", "Last Name", "First Name", "Major",
+        "Current Standing", "Email", "Minor", "Advisor 1", "Advisor 2",
+        "UNKNOWN 1", "UNKNOWN 2", "UNKNOWN 3", "UNKNOWN 4", "UNKNOWN 5", "UNKNOWN 6"
+    ])
+
+    # pprint.pprint(common_info, sort_dicts=False)
+
+    # Break course number into parts
+    plan['Prefix'] = plan['Prefix_Number'].str[:5].str.rstrip()
+    plan['NumberStr'] = plan['Prefix_Number'].str[5:]
+    plan.drop('Prefix_Number', axis=1, inplace=True)
+    plan['Number'] = pd.to_numeric(plan['NumberStr'], errors='coerce') # NaN for non-numbers
+    # TODO: downcast='integer' # ignored with NaN even though nullable?
+    #plan['Number'] = plan['Number'].astype(int) # can't do with NaN
+
+    plan = plan.sort_index(level=["Year", "Term"])
+    # print(plan)
+
+    grad_plan = plan[plan['Number'] >= 5000].dropna(subset=['Number']) \
+        .drop(["NumberStr","Requirement"], axis=1)
+    grad_plan['Number'] = grad_plan['Number'].astype(int)
+    # print(grad_plan)
+    return grad_plan
+
 def summarize_student(args, df):
     """Find a specified student and summarize their record"""
     [ln, _, fn] = args.name.partition('_')
@@ -158,12 +225,15 @@ def summarize_student(args, df):
     pprint.pprint(reqs, sort_dicts=False)
 
     print("\nSearching for STAT Plan:")
-    plans = get_plans('_'.join([record.name, record['First Name']])) # restrict maximally beyond args.name
+    plans = get_plans('_'.join([record.name, record['First Name']])) # restrict beyond args.name
     if plans.empty:
         print("None found")
     else:
         pd.options.display.max_colwidth = None
         print(plans.iloc[0])
+        grad_plan = read_stat_plan(plans.at[0,'path'])
+        print("\nGraduate Courses in Plan:")
+        print(grad_plan)
 
     return 0
 
