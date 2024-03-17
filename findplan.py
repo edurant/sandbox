@@ -30,7 +30,21 @@ def file_sha224(pth):
     with open(pth, 'rb') as file:
         return hashlib.file_digest(file, "sha224").hexdigest()[-4:]
 
-def get_plans(pths, student_name):
+def get_default_stat_paths():
+    """Return default paths to search for STAT plans"""
+    plan_path = [
+        ['Box', 'EECS-Transition', '_Updated-Advising-Plans'], # PD read-only
+        ['Box', 'EECS Faculty and Staff', 'Advising Plans [DO NOT UPLOAD HERE]'], # former PD write
+        ['Box', 'EECS Advising Plans'], # all-advisor writable, PD readable
+        ['Dropbox', 'msoe', 'misc', 'advising', 'specificStudents', 'plans'] # local
+    ]
+    #    ['Box', 'EECS-Transition', '_Course-Histories'], # not plan, use to make new plan
+    home_path = os.path.expanduser("~")
+    plan_path = [os.path.join(home_path, *pth) for pth in plan_path]
+    plan_path.extend(glob(os.path.join(home_path, "Box", "STAT-*/"))) # advisor-specific
+    return plan_path
+
+def get_plans(student_name, pths=get_default_stat_paths()):
     """
     Recursively search all paths in pths for plans for student_name and return
     DataFrame of unique plans found. Sorted with most recent mtime first.
@@ -58,7 +72,7 @@ def get_plans(pths, student_name):
 
 def main(args):
     """Find matching advising plans, copy user selection to clipboard"""
-    data_frame = get_plans(args.directory, args.name)
+    data_frame = get_plans(args.name, args.directory)
 
     if data_frame.empty:
         print('No plans found, exiting...')
@@ -77,20 +91,9 @@ def main(args):
 
 if __name__ == "__main__":
     # execute only if run as a script
-    plan_path = [
-        ['Box', 'EECS-Transition', '_Updated-Advising-Plans'], # PD read-only
-        ['Box', 'EECS Faculty and Staff', 'Advising Plans [DO NOT UPLOAD HERE]'], # former PD write
-        ['Box', 'EECS Advising Plans'], # all-advisor writable, PD readable
-        ['Dropbox', 'msoe', 'misc', 'advising', 'specificStudents', 'plans'] # local
-    ]
-    #    ['Box', 'EECS-Transition', '_Course-Histories'], # not plan, use to make new plan
-    home_path = os.path.expanduser("~")
-    plan_path = [os.path.join(home_path, *pth) for pth in plan_path]
-    plan_path.extend(glob(os.path.join(home_path, "Box", "STAT-*/"))) # advisor-specific
-
     parser = argparse.ArgumentParser(description=__doc__,
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument('name', type=str, help='LastName | LastName_FirstInit | LastName_FirstName')
-    parser.add_argument('-d', '--directory', type=str, default=plan_path,
+    parser.add_argument('-d', '--directory', type=str, default=get_default_stat_paths(),
         help='Directories to search')
     main(parser.parse_args())

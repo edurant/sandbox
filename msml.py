@@ -19,6 +19,7 @@ import shutil
 import pprint
 import numpy as np
 import pandas as pd
+from findplan import get_plans
 
 def check_file_accessibility(filename):
     """ Check if the file is accessible for reading. """
@@ -155,6 +156,14 @@ def summarize_student(args, df):
     print("\nRequirements Check:")
     reqs = get_requirements(classes, record['CSC5610 Needed?'], record['MTH5810 Needed?'])
     pprint.pprint(reqs, sort_dicts=False)
+
+    print("\nSearching for STAT Plan:")
+    plans = get_plans('_'.join([record.name, record['First Name']])) # restrict maximally beyond args.name
+    if plans.empty:
+        print("None found")
+    else:
+        pd.options.display.max_colwidth = None
+        print(plans.iloc[0])
 
     return 0
 
