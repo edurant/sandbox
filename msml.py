@@ -3,7 +3,7 @@
 
 """
 Given the XLSX master file for MSML course planning, do one of the following:
-* Produce a student's advising plan
+* Produce a student's advising plan and compare with STAT plan if available
 * For named students (MSML, not certificates):
   * Given a course code, list each term it is planned and who is taking it
   * Given a term code, list each course that is planned and who is taking it
@@ -187,18 +187,14 @@ def read_stat_plan(fn):
 
     # Break course number into parts
     plan['Prefix'] = plan['Prefix_Number'].str[:5].str.rstrip()
-    plan['NumberStr'] = plan['Prefix_Number'].str[5:]
+    plan['Number'] = plan['Prefix_Number'].str[5:]
     plan.drop('Prefix_Number', axis=1, inplace=True)
-    plan['Number'] = pd.to_numeric(plan['NumberStr'], errors='coerce') # NaN for non-numbers
-    # TODO: downcast='integer' # ignored with NaN even though nullable?
-    #plan['Number'] = plan['Number'].astype(int) # can't do with NaN
-
+    plan = plan.sort_values(["Prefix", "Number"]) # 1st since less significant
     plan = plan.sort_index(level=["Year", "Term"])
     # print(plan)
 
-    grad_plan = plan[plan['Number'] >= 5000].dropna(subset=['Number']) \
-        .drop(["NumberStr","Requirement"], axis=1)
-    grad_plan['Number'] = grad_plan['Number'].astype(int)
+    grad_plan = plan[(plan['Number'].str[0] >= '5') & (plan['Number'].str[0] <= '9')] \
+        .drop(["Requirement"], axis=1)
     # print(grad_plan)
     return grad_plan
 
