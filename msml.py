@@ -168,7 +168,7 @@ def read_stat_plan(fn):
     # TODO: Compute when the student will reach senior standing (90 credits)
 
     # read_csv supports 1 comment character, but we have 2, so preprocess:
-    with open(fn, 'r') as file:
+    with open(fn, 'r', encoding='utf-8') as file:
         filtered_lines = [line for line in file if not line.strip().startswith(('<','>'))]
     buffer = StringIO(''.join(filtered_lines)) # convert to file-like object
 
@@ -178,12 +178,12 @@ def read_stat_plan(fn):
             "UNKNOWN 2", "UNKNOWN 3", "UNKNOWN 4", "Advisor 1", "Advisor 2", "UNKNOWN 5",
             "UNKNOWN 6", "Requirement"])
 
-    common_info, plan = extract_and_remove_fields(plan, ["ID", "Last Name", "First Name", "Major",
+    _, plan = extract_and_remove_fields(plan, ["ID", "Last Name", "First Name", "Major",
         "Current Standing", "Email", "Minor", "Advisor 1", "Advisor 2",
         "UNKNOWN 1", "UNKNOWN 2", "UNKNOWN 3", "UNKNOWN 4", "UNKNOWN 5", "UNKNOWN 6"
     ])
 
-    # pprint.pprint(common_info, sort_dicts=False)
+    plan = plan[plan.index.get_level_values('Term') != 'RM'] # removed requirements in STAT plan
 
     # Break course number into parts
     plan['Prefix'] = plan['Prefix_Number'].str[:5].str.rstrip()
@@ -191,11 +191,10 @@ def read_stat_plan(fn):
     plan.drop('Prefix_Number', axis=1, inplace=True)
     plan = plan.sort_values(["Prefix", "Number"]) # 1st since less significant
     plan = plan.sort_index(level=["Year", "Term"])
-    # print(plan)
 
     grad_plan = plan[(plan['Number'].str[0] >= '5') & (plan['Number'].str[0] <= '9')] \
         .drop(["Requirement"], axis=1)
-    # print(grad_plan)
+
     return grad_plan
 
 def summarize_student(args, df):
@@ -228,7 +227,7 @@ def summarize_student(args, df):
         pd.options.display.max_colwidth = None
         print(plans.iloc[0])
         grad_plan = read_stat_plan(plans.at[0,'path'])
-        print("\nGraduate Courses in Plan:")
+        print("\nGraduate Courses in STAT Plan:")
         print(grad_plan)
 
     return 0
