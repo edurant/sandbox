@@ -165,8 +165,6 @@ def extract_and_remove_fields(df, fields):
 def read_stat_plan(fn):
     """Given the path to a STAT plan, extract information relevant to MSML"""
 
-    # TODO: Compute when the student will reach senior standing (90 credits)
-
     # read_csv supports 1 comment character, but we have 2, so preprocess:
     with open(fn, 'r', encoding='utf-8') as file:
         filtered_lines = [line for line in file if not line.strip().startswith(('<','>'))]
@@ -191,6 +189,11 @@ def read_stat_plan(fn):
     plan.drop('Prefix_Number', axis=1, inplace=True)
     plan = plan.sort_values(["Prefix", "Number"]) # 1st since less significant
     plan = plan.sort_index(level=["Year", "Term"])
+
+    # TODO: Compute when the student will reach senior standing (90 credits)
+    # TODO: Convert Status at load time to categorical
+    # Known categories: ['successful', 'unsuccessful', 'NoCredit', 'wip', 'unscheduled']
+    # Make sure seeing an unknown category causes a runtime warning/error
 
     grad_plan = plan[(plan['Number'].str[0] >= '5') & (plan['Number'].str[0] <= '9')] \
         .drop(["Requirement"], axis=1)
