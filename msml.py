@@ -171,6 +171,10 @@ def extract_grad_plan(plan):
         .drop(["Requirement"], axis=1)
     return grad_plan
 
+def sem_tup_str(tup):
+    """ Convert semester tuple, example: (2024, 'S2') becomes "2024S2" """
+    return str(tup[0]) + tup[1]
+
 def read_stat_plan(fn):
     """Given the path to a STAT plan, extract information relevant to MSML"""
 
@@ -202,7 +206,45 @@ def read_stat_plan(fn):
     plan = plan.sort_values(["Prefix", "Number"]) # 1st since less significant
     plan = plan.sort_index(level=["Year", "Term"])
 
-    # TODO: Compute when the student will reach senior standing (90 credits)
+    # Convert everything to semester credits
+    plan['SemCredits'] = plan.apply(lambda row: row['Credits'] if len(row['Prefix']) == 3
+                                    else (2/3) * row['Credits'] if len(row['Prefix']) == 2
+                                    else np.nan, axis=1)
+
+    plan = plan[~plan['Status'].isin(['unsuccessful', 'NoCredit', 'missing'])] # not earned credits
+
+    # Confirm that the status are now in valid order
+    last_successful_idx = plan[plan['Status'] == 'successful'].index.max()
+    last_wip_idx = plan[plan['Status'] == 'wip'].index.max()
+    first_unsch_or_sch_idx = plan[plan['Status'].isin(['unscheduled', 'scheduled'])].index.min()
+
+    if pd.isna(last_successful_idx):
+        last_successful_idx = -1
+    if pd.isna(first_unsch_or_sch_idx):
+        first_unsch_or_sch_idx = float('inf')
+
+    if ~(last_successful_idx < last_wip_idx < first_unsch_or_sch_idx):
+        print("Cannot compute credit totals since record Status values are in invalid order")
+    else:
+        idx_successful = plan['Status'] == 'successful'
+        idx_wip = plan['Status'] == 'wip'
+
+        completed_credits = plan.loc[idx_successful, 'SemCredits'].sum()
+        wip_credits = plan.loc[idx_wip, 'SemCredits'].sum()
+
+        last_completed_term = sem_tup_str(plan[idx_successful].index[-1]) # TODO: new students?
+        last_wip_term = sem_tup_str(plan[idx_wip].index[-1]) # TODO: handle no WIP
+
+        print(f"{completed_credits:.2f} credits are complete as of {last_completed_term}")
+        if wip_credits > 0:
+            print(
+                f"{completed_credits+wip_credits:.2f} credits will be complete "
+                f"with successful WIP through {last_wip_term}"
+            )
+        else:
+            print("There is no WIP.")
+
+        # TODO: If total with WIP is <90, then group/sum remaining and summarize credit progress.
 
     return plan
 
