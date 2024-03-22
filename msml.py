@@ -162,6 +162,15 @@ def extract_and_remove_fields(df, fields):
 
     return field_values, df_reduced
 
+STATUS_CATEGORIES = ['successful', 'unsuccessful', 'NoCredit', 'wip', 'unscheduled', 'scheduled',
+    'missing']
+
+def extract_grad_plan(plan):
+    """Given a DataFrame with the student's entire STAT plan, extract the graduate portion"""
+    grad_plan = plan[(plan['Number'].str[0] >= '5') & (plan['Number'].str[0] <= '9')] \
+        .drop(["Requirement"], axis=1)
+    return grad_plan
+
 def read_stat_plan(fn):
     """Given the path to a STAT plan, extract information relevant to MSML"""
 
@@ -174,14 +183,17 @@ def read_stat_plan(fn):
         names=["ID", "Year", "Term", "Prefix_Number", "Credits", "Status", "Course Name",
             "Last Name", "First Name", "Major", "Current Standing", "Email", "UNKNOWN 1", "Minor",
             "UNKNOWN 2", "UNKNOWN 3", "UNKNOWN 4", "Advisor 1", "Advisor 2", "UNKNOWN 5",
-            "UNKNOWN 6", "Requirement"])
+            "UNKNOWN 6", "Requirement"], dtype={'Status': 'category'})
+
+    plan['Status'] = pd.Categorical(plan['Status'], categories=STATUS_CATEGORIES)
+    extra_values = set(plan['Status'].unique()) - set(STATUS_CATEGORIES)
+    if extra_values: # set not empty, nan indicates something couldn't convert
+        raise ValueError("Unrecognized Status category") # too late to find nan source
 
     _, plan = extract_and_remove_fields(plan, ["ID", "Last Name", "First Name", "Major",
         "Current Standing", "Email", "Minor", "Advisor 1", "Advisor 2",
         "UNKNOWN 1", "UNKNOWN 2", "UNKNOWN 3", "UNKNOWN 4", "UNKNOWN 5", "UNKNOWN 6"
     ])
-
-    plan = plan[plan.index.get_level_values('Term') != 'RM'] # removed requirements in STAT plan
 
     # Break course number into parts
     plan['Prefix'] = plan['Prefix_Number'].str[:5].str.rstrip()
@@ -191,14 +203,8 @@ def read_stat_plan(fn):
     plan = plan.sort_index(level=["Year", "Term"])
 
     # TODO: Compute when the student will reach senior standing (90 credits)
-    # TODO: Convert Status at load time to categorical
-    # Known categories: ['successful', 'unsuccessful', 'NoCredit', 'wip', 'unscheduled']
-    # Make sure seeing an unknown category causes a runtime warning/error
 
-    grad_plan = plan[(plan['Number'].str[0] >= '5') & (plan['Number'].str[0] <= '9')] \
-        .drop(["Requirement"], axis=1)
-
-    return grad_plan
+    return plan
 
 def summarize_student(args, df):
     """Find a specified student and summarize their record"""
@@ -229,7 +235,8 @@ def summarize_student(args, df):
     else:
         pd.options.display.max_colwidth = None
         print(plans.iloc[0])
-        grad_plan = read_stat_plan(plans.at[0,'path'])
+        plan = read_stat_plan(plans.at[0,'path'])
+        grad_plan = extract_grad_plan(plan)
         print("\nGraduate Courses in STAT Plan:")
         print(grad_plan)
 
