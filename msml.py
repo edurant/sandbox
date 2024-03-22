@@ -240,24 +240,22 @@ def summarize_course(args, df):
     """Given a course code, list MSML students planning to take it"""
     results = []
 
-    # Iterate over each column in the DataFrame
-    # TODO: All column names that aren't a term should also be ignored to avoid spurious hits
-    for col in df.columns.drop(['First Name', 'MTH5810 Needed?']):
+    # Iterate over columns containing each semester's course selections
+    for col in df.columns[df.columns.str.contains(r'\dS\d{2} C\d')]:
         # Check if any cell in the column contains the course code
-        # TODO: Debug the following since this matching approach was problematic in other functions
         matching_rows = df[df[col].astype(str).str.contains(args.name, na=False)]
-        #matching_rows = df[df[col].notna()] # TODO: Should work if we keep only the right columns
-
-        # For each matching row, append a new row to the results list with the Last Name,
-        # First Name, and the column name (which is the name of the term)
+        # Append the results list with Last Name, First Name, and column name (name of the term)
         for _, row in matching_rows.iterrows():
             results.append({'Last Name': row.name, 'First Name': row['First Name'],
                 'Term': col.split(' ', 1)[0]})
 
-    grouped = pd.DataFrame(results).groupby('Term', sort=False).apply(full_names).to_dict()
-    pprint.pprint(grouped, sort_dicts=False)
-    for k, v in grouped.items():
-        print(f"{k}: {len(v)} students")
+    if results:
+        grouped = pd.DataFrame(results).groupby('Term', sort=False).apply(full_names).to_dict()
+        pprint.pprint(grouped, sort_dicts=False)
+        for k, v in grouped.items():
+            print(f"{k}: {len(v)} students")
+    else:
+        print(f"Course not found: [{args.name}]")
 
     return 0
 
