@@ -176,8 +176,12 @@ def sem_tup_str(tup):
     return str(tup[0]) + tup[1]
 
 def read_stat_plan(fn):
-    """Given the path to a STAT plan, extract information relevant to MSML"""
-
+    """
+    Given the path to a STAT plan, return corresponding DataFrame and calculate credits completed
+    and WIP. Doesn't include unsuccessful, NoCredit, or missing courses. Calculates semester
+    credits and raises an error if various sequenece rules are violated (e.g., a course is planned
+    in a past semester).
+    """
     # read_csv supports 1 comment character, but we have 2, so preprocess:
     with open(fn, 'r', encoding='utf-8') as file:
         filtered_lines = [line for line in file if not line.strip().startswith(('<','>'))]
