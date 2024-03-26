@@ -217,30 +217,26 @@ def read_stat_plan(fn):
 
     plan = plan[~plan['Status'].isin(['unsuccessful', 'NoCredit', 'missing'])] # not earned credits
 
-    # TODO: The following needs further cleanup
-    idx = {'successful': plan['Status'] == 'successful',
-           'wip': plan['Status'] == 'wip'}
+    for k in ['Credits', 'SemCredits']:
+        if np.all(plan[k] % 1 == 0):
+            plan[k] = plan[k].astype('int32')
 
-    credits = {'successful': plan.loc[idx['successful'],'SemCredits'].sum(),
-               'wip': plan.loc[idx['wip'],'SemCredits'].sum()}
+    idx, sem_credits, last_term = {}, {}, {}
+    for k in ['successful', 'wip']:
+        idx[k] = plan['Status'] == k
+        sem_credits[k] = plan.loc[idx[k],'SemCredits'].sum()
+        last_term[k] = sem_tup_str(plan[idx[k]].index[-1]) if any(idx[k]) else None
 
-    last_completed_term = sem_tup_str(plan[idx['successful']].index[-1]) # TODO: new students?
-
-    if any(idx['wip']):
-        last_wip_term = sem_tup_str(plan[idx['wip']].index[-1])
-    else:
-        last_wip_term = None
-
-    print(f"{credits['successful']:.2f} credits are complete as of {last_completed_term}")
-    if credits['wip'] > 0:
+    print(f"{sem_credits['successful']:.2f} credits are complete as of {last_term['successful']}")
+    if sem_credits['wip'] > 0:
         print(
-            f"{credits['successful']+credits['wip']:.2f} credits will be complete "
-            f"with successful WIP through {last_wip_term}"
+            f"{sem_credits['successful']+sem_credits['wip']:.2f} credits will be complete "
+            f"with successful WIP through {last_term['wip']}"
         )
     else:
         print("There is no WIP.")
 
-    # TODO: If total with WIP is <90, then group/sum remaining and summarize credit progress.
+    # TODO: If total with WIP is <90, then sum remaining terms and summarize credit progress.
     # plan[plan['Status'].isin(['unscheduled', 'scheduled'])]
 
     return plan
