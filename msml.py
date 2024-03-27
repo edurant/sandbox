@@ -195,7 +195,8 @@ def summarize_course(args, df):
                 'Term': col.split(' ', 1)[0]})
 
     if results:
-        grouped = pd.DataFrame(results).groupby('Term', sort=False).apply(full_names).to_dict()
+        grouped = pd.DataFrame(results).sort_values(["Last Name", "First Name"]) \
+            .groupby('Term', sort=False).apply(full_names).to_dict()
         pprint.pprint(grouped, sort_dicts=False)
         for k, v in grouped.items():
             print(f"{k}: {len(v)} students")
