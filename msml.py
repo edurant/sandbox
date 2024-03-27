@@ -17,10 +17,9 @@ import re
 import argparse
 import shutil
 import pprint
-from io import StringIO
 import numpy as np
 import pandas as pd
-from findplan import get_plans
+from findplan import get_plans, read_stat_plan
 
 def check_file_accessibility(filename):
     """ Check if the file is accessible for reading. """
@@ -136,110 +135,11 @@ def get_requirements(class_list, need_csc5610, need_mth5810):
         reqs["Extra course " + str(ex)] = opt
     return reqs
 
-def extract_and_remove_fields(df, fields):
-    """
-    Extracts fields with identical values and returns a dictionary of these values
-    and a DataFrame with the fields removed. Raises an error if any field does not
-    contain identical values for every record.
-
-    Parameters:
-    - df: Pandas DataFrame from which to extract fields.
-    - fields: List of field names to extract and remove.
-
-    Returns:
-    - A tuple containing:
-        1. A dictionary of field names with the associated identical value.
-        2. The DataFrame with specified fields removed.
-    """
-    field_values = {}
-    for field in fields:
-        if not df[field].nunique(dropna=False) == 1:
-            raise ValueError(f"Field '{field}' does not have identical values for every record.")
-        field_values[field] = df[field].iloc[0]
-
-    # Remove the specified fields from the DataFrame
-    df_reduced = df.drop(columns=fields)
-
-    return field_values, df_reduced
-
-STATUS_CATEGORIES = ['successful', 'unsuccessful', 'NoCredit', 'wip', 'unscheduled', 'scheduled',
-    'missing']
-
 def extract_grad_plan(plan):
     """Given a DataFrame with the student's entire STAT plan, extract the graduate portion"""
     grad_plan = plan[(plan['Number'].str[0] >= '5') & (plan['Number'].str[0] <= '9')] \
         .drop(["Requirement"], axis=1)
     return grad_plan
-
-def sem_tup_str(tup):
-    """ Convert semester tuple, example: (2024, 'S2') becomes "2024S2" """
-    return str(tup[0]) + tup[1]
-
-def read_stat_plan(fn):
-    """
-    Given the path to a STAT plan, return corresponding DataFrame and calculate credits completed
-    and WIP. Doesn't include unsuccessful, NoCredit, or missing courses. Calculates semester
-    credits and raises an error if various sequenece rules are violated (e.g., a course is planned
-    in a past semester).
-    """
-    # read_csv supports 1 comment character, but we have 2, so preprocess:
-    with open(fn, 'r', encoding='utf-8') as file:
-        filtered_lines = [line for line in file if not line.strip().startswith(('<','>'))]
-    buffer = StringIO(''.join(filtered_lines)) # convert to file-like object
-
-    plan = pd.read_csv(buffer, sep='\t', skiprows=1, index_col=["Year", "Term"],
-        names=["ID", "Year", "Term", "Prefix_Number", "Credits", "Status", "Course Name",
-            "Last Name", "First Name", "Major", "Current Standing", "Email", "UNKNOWN 1", "Minor",
-            "UNKNOWN 2", "UNKNOWN 3", "UNKNOWN 4", "Advisor 1", "Advisor 2", "UNKNOWN 5",
-            "UNKNOWN 6", "Requirement"], dtype={'Status': 'category'})
-
-    plan['Status'] = pd.Categorical(plan['Status'], categories=STATUS_CATEGORIES)
-    extra_values = set(plan['Status'].unique()) - set(STATUS_CATEGORIES)
-    if extra_values: # set not empty, nan indicates something couldn't convert
-        raise ValueError("Unrecognized Status category") # too late to find nan source
-
-    _, plan = extract_and_remove_fields(plan, ["ID", "Last Name", "First Name", "Major",
-        "Current Standing", "Email", "Minor", "Advisor 1", "Advisor 2",
-        "UNKNOWN 1", "UNKNOWN 2", "UNKNOWN 3", "UNKNOWN 4", "UNKNOWN 5", "UNKNOWN 6"
-    ])
-
-    # Break course number into parts
-    plan['Prefix'] = plan['Prefix_Number'].str[:5].str.rstrip()
-    plan['Number'] = plan['Prefix_Number'].str[5:]
-    plan.drop('Prefix_Number', axis=1, inplace=True)
-    plan = plan.sort_values(["Prefix", "Number"]) # 1st since less significant
-    plan = plan.sort_index(level=["Year", "Term"])
-
-    # Convert everything to semester credits
-    plan['SemCredits'] = plan.apply(lambda row: row['Credits'] if len(row['Prefix']) == 3
-                                    else (2/3) * row['Credits'] if len(row['Prefix']) == 2
-                                    else np.nan, axis=1)
-
-    plan = plan[~plan['Status'].isin(['unsuccessful', 'NoCredit', 'missing'])] # not earned credits
-
-    for k in ['Credits', 'SemCredits']:
-        if np.all(plan[k] % 1 == 0):
-            plan[k] = plan[k].astype('int32')
-
-    idx, sem_credits, last_term = {}, {}, {}
-    for k in ['successful', 'wip']:
-        idx[k] = plan['Status'] == k
-        sem_credits[k] = plan.loc[idx[k],'SemCredits'].sum()
-        last_term[k] = sem_tup_str(plan[idx[k]].index[-1]) if any(idx[k]) else None
-
-    print(f"{sem_credits['successful']:.2f} credits are complete as of {last_term['successful']}")
-    if sem_credits['wip'] > 0:
-        print(
-            f"{sem_credits['successful']+sem_credits['wip']:.2f} credits will be complete "
-            f"with successful WIP through {last_term['wip']}"
-        )
-    else:
-        print("There is no WIP.")
-
-    # TODO: If total with WIP is <90, then sum remaining terms and summarize credit progress.
-    # plan[plan['Status'].isin(['unscheduled', 'scheduled'])]
-
-    return plan
 
 def summarize_student(args, df):
     """Find a specified student and summarize their record"""
