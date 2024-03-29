@@ -168,8 +168,10 @@ def read_stat_plan(fn):
     else:
         print("There is no WIP.")
 
-    # TODO: If total with WIP is <90, then sum remaining terms and summarize credit progress.
-    # plan[plan['Status'].isin(['unscheduled', 'scheduled'])]
+    earned_credits_term = plan.groupby(['Year', 'Term']).agg({'Credits': 'sum', 'SemCredits': 'sum'}).reset_index()
+    earned_credits_term['TotalSemCredits'] = earned_credits_term['SemCredits'].cumsum()
+    print(earned_credits_term.to_string(index=False))
+    # TODO: If total with WIP is <90, calculate when senior status attained.
 
     return plan
 
