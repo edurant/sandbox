@@ -14,11 +14,13 @@ Given the XLSX master file for MSML course planning, do one of the following:
 
 import os
 import re
+from io import StringIO
 import argparse
 import shutil
 import pprint
 import numpy as np
 import pandas as pd
+import pyperclip
 from findplan import get_plans, read_stat_plan
 
 def check_file_accessibility(filename):
@@ -189,17 +191,25 @@ def summarize_course(args, df):
     for col in df.columns[df.columns.str.contains(r'\dS\d{2} C\d')]:
         # Check if any cell in the column contains the course code
         matching_rows = df[df[col].astype(str).str.contains(args.name, na=False)]
-        # Append the results list with Last Name, First Name, and column name (name of the term)
+        term = col.split(' ', 1)[0]
+        # Append the results list with student name and term details
         for _, row in matching_rows.iterrows():
             results.append({'Last Name': row.name, 'First Name': row['First Name'],
-                'Term': col.split(' ', 1)[0]})
+                'Year': term[2:], 'Semester': term[0]})
 
     if results:
-        grouped = pd.DataFrame(results).sort_values(["Last Name", "First Name"]) \
-            .groupby('Term', sort=False).apply(full_names).to_dict()
-        pprint.pprint(grouped, sort_dicts=False)
-        for k, v in grouped.items():
-            print(f"{k}: {len(v)} students")
+        cols = ['Year', 'Semester', "Last Name", "First Name"]
+        enrolled = pd.DataFrame(results, columns=cols).sort_values(cols)
+        print(enrolled.to_string(index=False))
+
+        # Copy to clipboard for easy pasting to Excel
+        output = StringIO()
+        enrolled.to_csv(output, sep='\t', index=False, header=True)
+        pyperclip.copy(output.getvalue())
+        print("List of enrollments copied to clipboard")
+
+        seat_counts = enrolled.groupby(['Year', 'Semester']).size().reset_index(name='Count')
+        print(seat_counts.to_string(index=False))
     else:
         print(f"Course not found: [{args.name}]")
 
