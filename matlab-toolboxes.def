@@ -1,18 +1,13 @@
 # MATLAB image with toolboxes for CSC5651, etc. Build with...
 # singularity build --fakeroot matlab-RELEASE-toolboxes.sif matlab-toolboxes.def
 
-# 2023-12-11: Latest 12-01 docker image is r2023b but has tag r2023a, hence differing nvcr and --release references
-
-# 2023-12-11: In the last month or so gstreamer upstream caused build to fail during apt-get,
-# prompting and locking during interactive tzdata configuration, which should be non-interactive.
-# It is in the following packages:
-# gstreamer1.0-plugins-bad libgstreamer-plugins-bad1.0-dev gstreamer1.0-plugins-ugly
+# Removed the following in 2023-12 due to upstream errors:
 
 # Test key gstreamer functionality:
 # gst-launch-1.0 playbin uri=file:///home/username/filename.mp4
 
 Bootstrap: docker
-From: nvcr.io/partners/matlab:r2023a
+From: nvcr.io/partners/matlab:r2024a
 
 %post
 
@@ -30,7 +25,7 @@ wget -q https://www.mathworks.com/mpm/glnxa64/mpm \
     && EXISTING_MATLAB_LOCATION=$(dirname $(dirname $(readlink -f $(which matlab)))) \
     && ./mpm install \
         --destination=${EXISTING_MATLAB_LOCATION} \
-        --release=R2023b \
+        --release=R2024a \
         --products=Audio_Toolbox DSP_System_Toolbox \
            Computer_Vision_Toolbox_Model_for_YOLO_v2_Object_Detection \
            Computer_Vision_Toolbox_Model_for_YOLO_v3_Object_Detection \
