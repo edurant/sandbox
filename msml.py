@@ -119,7 +119,7 @@ def get_requirements(class_list, need_csc5610, need_mth5810):
     for crs in requirements.copy():
         if crs.startswith("CSC5xxx"):
             for opt in planned:
-                if opt.startswith("CSC") and opt[3].isdigit() and int(opt[3]) >= 5:
+                if opt.startswith(("BME","CSC")) and opt[3].isdigit() and int(opt[3]) >= 5:
                     reqs[crs] = opt
                     requirements.remove(crs)
                     planned.remove(opt)
@@ -224,7 +224,8 @@ def summarize_term(args, df):
         matching_rows = df[df[col].notna()]
         for _, row in matching_rows.iterrows():
             results.append({'Last Name': row.name, 'First Name': row['First Name'],
-                'Course': row[col]})
+                'Course': row[col], 'BS Complete?': row['BS Complete?'],
+                'BS Expected': row['BS Expected']})
 
     grouped = pd.DataFrame(results)
     grouped.sort_values(by=['Course', 'Last Name', 'First Name'], inplace=True)
