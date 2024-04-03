@@ -9,9 +9,6 @@ Given the XLSX master file for MSML course planning, do one of the following:
   * Given a term code, list each course that is planned and who is taking it
 """
 
-# TODO:
-# Support LastName_FirstInitial
-
 import os
 import re
 from io import StringIO
@@ -265,9 +262,9 @@ def main(args):
     for field in boolean_fields:
         df[field] = df[field].astype("boolean")
 
-    # Drop summary and historic rows, keeping only the records of students who
-    # were or will actually be enrolled at some point in time. The first blank/None
-    # index value indicates the end of these students.
+    # Drop summary and historic rows, keeping only the records of students who were
+    # or will actually be enrolled at some point in time. The first NaN corresponds
+    # to the first blank source cell and indicates the end of these students.
     try:
         nan_index_pos = df.index.tolist().index(np.NaN)
         df = df.iloc[:nan_index_pos]
