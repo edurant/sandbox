@@ -3,8 +3,6 @@
 
 """Find, select, and copy to clipboard MSOE STAT advising file for a given student"""
 
-# TODO: Default to select latest plan but allow command line override
-
 import os
 import argparse
 from glob import glob
@@ -168,10 +166,15 @@ def read_stat_plan(fn):
     else:
         print("There is no WIP.")
 
-    earned_credits_term = plan.groupby(['Year', 'Term']).agg({'Credits': 'sum', 'SemCredits': 'sum'}).reset_index()
+    earned_credits_term = plan.groupby(['Year', 'Term']).agg(
+        {'Credits': 'sum', 'SemCredits': 'sum'}).reset_index()
     earned_credits_term['TotalSemCredits'] = earned_credits_term['SemCredits'].cumsum()
     print(earned_credits_term.to_string(index=False))
-    # TODO: If total with WIP is <90, calculate when senior status attained.
+    if sem_credits['wip'] < 90:
+        senior_terms = earned_credits_term[earned_credits_term['TotalSemCredits'] >= 90]
+        if not senior_terms.empty:
+            print("Senior standing will be reached after "
+                f"{sem_tup_str(senior_terms.iloc[0][['Year', 'Term']].tolist())}")
 
     return plan
 
@@ -192,7 +195,7 @@ def main(args):
     pyperclip.copy(selected_plan)
     print('Filename copied to clipboard')
 
-    if args.summarize:
+    if not args.no_summary:
         plan = read_stat_plan(selected_plan)
         print(plan)
 
@@ -205,5 +208,5 @@ if __name__ == "__main__":
     parser.add_argument('name', type=str, help='LastName | LastName_FirstInit | LastName_FirstName')
     parser.add_argument('-d', '--directory', type=str, default=get_default_stat_paths(),
         help='Directories to search')
-    parser.add_argument('-s', '--summarize', action='store_true', help='Summarize selected plan')
+    parser.add_argument('-n', '--no-summary', action='store_true', help="Don't summarize plan")
     main(parser.parse_args())
