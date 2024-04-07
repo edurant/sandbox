@@ -251,7 +251,7 @@ def main(args):
 
     # See https://github.com/pandas-dev/pandas/issues/45903 re loading bool as uint8
     boolean_fields = ["Early Entry Originally", "BS Complete?", "GPA < 3",
-        "CSC5120 Needed?", "CSC5610 Needed?"]
+        "HasLinearAlgebra", "HasMultivariableCalculus", "CSC5120 Needed?", "CSC5610 Needed?"]
     # "MTH5810 Needed?" is detected as boolean; adding it to the above list causes conversion error
     int32_fields = ["ID Number", "#≥6000 before BS", "# Assigned"]
     df = pd.read_excel(args.file, index_col=0, dtype={
