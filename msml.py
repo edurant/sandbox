@@ -138,6 +138,9 @@ def extract_grad_plan(plan):
     """Given a DataFrame with the student's entire STAT plan, extract the graduate portion"""
     grad_plan = plan[(plan['Number'].str[0] >= '5') & (plan['Number'].str[0] <= '9')] \
         .drop(["Requirement"], axis=1)
+    for k in ['Credits', 'SemCredits']:
+        if np.all(grad_plan[k] % 1 == 0):
+            grad_plan[k] = grad_plan[k].astype('int32')
     return grad_plan
 
 def summarize_student(args, df):
