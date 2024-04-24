@@ -14,6 +14,7 @@ import re
 from io import StringIO
 import argparse
 import shutil
+import contextlib
 import pprint
 import numpy as np
 import pandas as pd
@@ -28,17 +29,31 @@ def check_file_accessibility(filename):
     except OSError: # PermissionError is the common raised subclass
         return False
 
-def create_local_copy(source_path, destination_path=os.path.join('.','temp.xlsx')):
-    """ Create a local copy of the file. """
-    try:
-        # .copy and .copyfile fail to read when locked even though xcopy and .copy2 succeed
-        shutil.copy2(source_path, destination_path)
-        # TODO: Don't leave temp.xlsx in place when exiting
-        print("Local copy created successfully.")
-        return destination_path
-    except IOError:
-        print("Error while creating a local copy.")
-        raise # re-raise, fatal error
+@contextlib.contextmanager
+def safe_file_access(source_path, destination_path=os.path.join('.', 'temp.xlsx')):
+    """Context manager to access file with fallback to temporary copy if original is locked."""
+    # TODO: use tempfile.TemporaryFile or .mkstemp
+    temp_file_used = False
+
+    if check_file_accessibility(source_path):
+        print("File is accessible for reading.")
+        yield source_path
+    else:
+        print("File is not accessible. Assuming OneDrive lock.")
+        try:
+            shutil.copy2(source_path, destination_path)
+            print("Local copy created due to file lock.")
+            yield destination_path
+            temp_file_used = True
+        except IOError:
+            print("Error while creating a local copy.")
+            raise # re-raise, fatal error
+
+    # Cleanup if temporary file was used
+    if temp_file_used:
+        if os.path.exists(destination_path):
+            os.remove(destination_path)
+            print("Local copy removed successfully.")
 
 TERMS = {1: 'Fall', 2: 'Spring', 3: 'Summer'}
 
@@ -238,21 +253,18 @@ def summarize_term(args, df):
 
 def main(args):
     """Perform actions requested by command line arguments"""
-    if check_file_accessibility(args.file):
-        print("File is accessible for reading.")
-    else:
-        print("File is not accessible. Assuming OneDrive lock.")
-        args.file = create_local_copy(args.file)
 
     # See https://github.com/pandas-dev/pandas/issues/45903 re loading bool as uint8
     boolean_fields = ["Early Entry Originally", "BS Complete?", "GPA < 3",
         "HasLinearAlgebra", "HasMultivariableCalculus", "CSC5120 Needed?", "CSC5610 Needed?"]
     # "MTH5810 Needed?" is detected as boolean; adding it to the above list causes conversion error
     int32_fields = ["ID Number", "#≥6000 before BS", "# Assigned"]
-    df = pd.read_excel(args.file, index_col=0, dtype={
-        **{field: pd.UInt8Dtype() for field in boolean_fields},
-        **{field: pd.Int32Dtype() for field in int32_fields}
-    })
+
+    with safe_file_access(args.file) as accessible_file_path:
+        df = pd.read_excel(accessible_file_path, index_col=0, dtype={
+            **{field: pd.UInt8Dtype() for field in boolean_fields},
+            **{field: pd.Int32Dtype() for field in int32_fields}
+        })
 
     for field in boolean_fields:
         df[field] = df[field].astype("boolean")
