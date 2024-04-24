@@ -25,10 +25,7 @@ def check_file_accessibility(filename):
     try:
         with open(filename, 'rb'):
             return True
-    except PermissionError:
-        return False
-    except Exception as e:
-        print(f"An unexpected error occurred: {e}")
+    except OSError: # PermissionError is the common raised subclass
         return False
 
 def create_local_copy(source_path, destination_path=os.path.join('.','temp.xlsx')):
@@ -37,10 +34,11 @@ def create_local_copy(source_path, destination_path=os.path.join('.','temp.xlsx'
         # .copy and .copyfile fail to read when locked even though xcopy and .copy2 succeed
         shutil.copy2(source_path, destination_path)
         # TODO: Don't leave temp.xlsx in place when exiting
-        return True
-    except Exception as e:
-        print(f"Error while creating a local copy: {e}")
-        return False
+        print("Local copy created successfully.")
+        return destination_path
+    except IOError:
+        print("Error while creating a local copy.")
+        raise # re-raise, fatal error
 
 TERMS = {1: 'Fall', 2: 'Spring', 3: 'Summer'}
 
@@ -244,13 +242,7 @@ def main(args):
         print("File is accessible for reading.")
     else:
         print("File is not accessible. Assuming OneDrive lock.")
-        if create_local_copy(args.file):
-            print("Local copy created successfully.")
-            args.file = 'temp.xlsx'
-        else:
-            print("Failed to create a local copy. Cannot proceed.")
-            args.file = None
-            return -1
+        args.file = create_local_copy(args.file)
 
     # See https://github.com/pandas-dev/pandas/issues/45903 re loading bool as uint8
     boolean_fields = ["Early Entry Originally", "BS Complete?", "GPA < 3",
