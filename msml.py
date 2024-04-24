@@ -15,6 +15,7 @@ from io import StringIO
 import argparse
 import shutil
 import contextlib
+import tempfile
 import pprint
 import numpy as np
 import pandas as pd
@@ -30,10 +31,10 @@ def check_file_accessibility(filename):
         return False
 
 @contextlib.contextmanager
-def safe_file_access(source_path, destination_path=os.path.join('.', 'temp.xlsx')):
-    """Context manager to access file with fallback to temporary copy if original is locked."""
-    # TODO: use tempfile.TemporaryFile or .mkstemp
+def safe_file_access(source_path):
+    """Context manager to access file with fallback to temporary copy if the original is locked."""
     temp_file_used = False
+    temp_file_path = None
 
     if check_file_accessibility(source_path):
         print("File is accessible for reading.")
@@ -41,19 +42,19 @@ def safe_file_access(source_path, destination_path=os.path.join('.', 'temp.xlsx'
     else:
         print("File is not accessible. Assuming OneDrive lock.")
         try:
-            shutil.copy2(source_path, destination_path)
-            print("Local copy created due to file lock.")
-            yield destination_path
+            fd, temp_file_path = tempfile.mkstemp() # Create a temporary file
+            os.close(fd)  # Close the file descriptor, copy2 will open it again
+            shutil.copy2(source_path, temp_file_path)
+            print(f"Local copy created at {temp_file_path} due to file lock.")
             temp_file_used = True
+            yield temp_file_path
         except IOError:
             print("Error while creating a local copy.")
             raise # re-raise, fatal error
 
-    # Cleanup if temporary file was used
-    if temp_file_used:
-        if os.path.exists(destination_path):
-            os.remove(destination_path)
-            print("Local copy removed successfully.")
+    if temp_file_used: # Cleanup if temporary file was used
+        os.remove(temp_file_path)
+        print("Temporary local copy removed successfully.")
 
 TERMS = {1: 'Fall', 2: 'Spring', 3: 'Summer'}
 
