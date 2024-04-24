@@ -193,10 +193,6 @@ def summarize_student(args, df):
 
     return 0
 
-def full_names(d):
-    """Given a DataFrame with first and last names, return a list of full names"""
-    return (d['First Name'] + ' ' + d['Last Name']).tolist()
-
 def summarize_course(args, df):
     """Given a course code, list MSML students planning to take it"""
     results = []
@@ -244,7 +240,9 @@ def summarize_term(args, df):
     grouped = pd.DataFrame(results)
     grouped.sort_values(by=['Course', 'Last Name', 'First Name'], inplace=True)
     grouped.to_excel(args.name+".xlsx", index=False, sheet_name=args.name, freeze_panes=(1,0))
-    grouped = grouped.groupby('Course').apply(full_names).to_dict()
+    df.reset_index(inplace=True) # Reset the index to turn 'Last Name' back into a regular column
+    grouped['Full Name'] = df['First Name'] + ' ' + df['Last Name']
+    grouped = grouped.groupby('Course')['Full Name'].agg(list).to_dict()
 
     pprint.pprint(grouped)
     for k, v in grouped.items():
