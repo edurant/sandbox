@@ -189,7 +189,8 @@ def main(args):
     pd.options.display.max_colwidth = None
     print(data_frame)
 
-    selected_plan = data_frame.at[ranged_input(data_frame.index.max()),'path']
+    idx = ranged_input(data_frame.index.max()) if args.choose else 0
+    selected_plan = data_frame.at[idx,'path']
 
     print(selected_plan)
     pyperclip.copy(selected_plan)
@@ -209,4 +210,5 @@ if __name__ == "__main__":
     parser.add_argument('-d', '--directory', type=str, default=get_default_stat_paths(),
         help='Directories to search')
     parser.add_argument('-n', '--no-summary', action='store_true', help="Don't summarize plan")
+    parser.add_argument('-c', '--choose', action='store_true', help="Choose plan interactively")
     main(parser.parse_args())
