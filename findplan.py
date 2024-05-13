@@ -121,7 +121,8 @@ def read_stat_plan(fn):
         names=["ID", "Year", "Term", "Prefix_Number", "Credits", "Status", "Course Name",
             "Last Name", "First Name", "Major", "Current Standing", "Email", "UNKNOWN 1", "Minor",
             "UNKNOWN 2", "UNKNOWN 3", "UNKNOWN 4", "Advisor 1", "Advisor 2", "UNKNOWN 5",
-            "UNKNOWN 6", "Requirement"], dtype={'Status': 'category'})
+            "UNKNOWN 6", "Requirement"], dtype={'Status': 'category',
+            **{f: 'string' for f in ['Prefix_Number', 'Course Name', 'Requirement']}})
 
     plan['Status'] = pd.Categorical(plan['Status'], categories=STATUS_CATEGORIES)
     extra_values = set(plan['Status'].unique()) - set(STATUS_CATEGORIES)
