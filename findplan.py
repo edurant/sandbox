@@ -38,6 +38,7 @@ def get_default_stat_paths():
         ['Box', 'EECS-Transition', '_Updated-Advising-Plans'], # PD read-only
         ['Box', 'EECS Faculty and Staff', 'Advising Plans [DO NOT UPLOAD HERE]'], # former PD write
         ['Box', 'EECS Advising Plans'], # all-advisor writable, PD readable
+        ['Box', 'CSSE Advising Plans'],
         ['Dropbox', 'msoe', 'misc', 'advising', 'specificStudents', 'plans'] # local
     ]
     #    ['Box', 'EECS-Transition', '_Course-Histories'], # not plan, use to make new plan
