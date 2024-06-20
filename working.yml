@@ -1,0 +1,20 @@
+name: working
+
+channels:
+  - defaults
+dependencies:
+  - beautifulsoup4
+  - ipython
+  - librosa
+  - matplotlib
+  - numpy
+  - openpyxl
+  - pandas
+  - pip
+  - pylint
+  - pyperclip
+  - python=3.12
+  - requests
+  - scikit-learn
+  - scipy
+  - tqdm
