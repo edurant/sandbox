@@ -33,8 +33,8 @@ def fetch_and_parse_url(base_url, course_prefix, cur_cat_oid, navoid):
         else:
             raise ValueError(f"Cannot infer navoid for cur_cat_oid={cur_cat_oid}, use -n")
 
-    url = f"{base_url}?filter%5B27%5D={course_prefix}&cur_cat_oid={cur_cat_oid}&navoid={navoid}"
-    response = requests.get(url, timeout=10)
+    params = {'filter[27]': course_prefix, 'cur_cat_oid': cur_cat_oid, 'navoid': navoid}
+    response = requests.get(base_url, params=params, timeout=10)
     response.raise_for_status()  # Ensure we notice bad responses
 
     soup = BeautifulSoup(response.content, 'html.parser')
