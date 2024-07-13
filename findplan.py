@@ -28,9 +28,17 @@ def ranged_input(upper_end):
             print("Invalid input. Please enter an integer.")
 
 def file_sha224(pth):
-    """Encapsulate file opening, hashing, and closing operations"""
-    with open(pth, 'rb') as file:
-        return hashlib.file_digest(file, "sha224").hexdigest()[-4:]
+    """Return last 4 characters of sha224 hash for a file; provide helpful failure diagnostics"""
+    if not os.path.isfile(pth):
+        raise FileNotFoundError(f"The file {pth} does not exist.")
+    if not os.access(pth, os.R_OK):
+        raise PermissionError(f"The file {pth} is not readable.")
+    try:
+        with open(pth, 'rb') as fileobj:
+            return hashlib.file_digest(fileobj, "sha224").hexdigest()[-4:]
+    except Exception as e:
+        # Files that appear to be readable may fail to read due to Box permission errors, etc.
+        raise ValueError(f"An error occurred while processing {pth}: {str(e)}") from e
 
 def get_default_stat_paths():
     """Return default paths to search for STAT plans"""
