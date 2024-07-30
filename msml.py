@@ -240,8 +240,7 @@ def summarize_term(args, df):
     grouped = pd.DataFrame(results)
     grouped.sort_values(by=['Course', 'Last Name', 'First Name'], inplace=True)
     grouped.to_excel(args.name+".xlsx", index=False, sheet_name=args.name, freeze_panes=(1,0))
-    df.reset_index(inplace=True) # Reset the index to turn 'Last Name' back into a regular column
-    grouped['Full Name'] = df['First Name'] + ' ' + df['Last Name']
+    grouped['Full Name'] = grouped['First Name'] + ' ' + grouped['Last Name']
     grouped = grouped.groupby('Course')['Full Name'].agg(list).to_dict()
 
     pprint.pprint(grouped)
