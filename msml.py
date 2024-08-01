@@ -118,19 +118,29 @@ def get_requirements(class_list, need_csc5610, need_mth5810):
     # Flatten the lists of classes into a single list
     planned = [s for sublist in class_list.values() for s in sublist]
 
-    # handle special case CSC5201, which can be met by CSC5201, CSC6711, or CSC6712
-    csc5201 = ["CSC5201", "CSC6711", "CSC6712"]
     reqs = {}
-    for opt in csc5201:
+
+    # Special case CSC5201, which can be met by any of 3 classes
+    for opt in ["CSC5201", "CSC6711", "CSC6712"]:
         if opt in planned:
             reqs["CSC5201"] = opt
             requirements.remove("CSC5201")
             planned.remove(opt)
             break
+
+    # Special case CSC5610, which can also be met by BUS6121+BUS6131
+    csc5610bus = ["BUS6121", "BUS6131"]
+    if "CSC5610" in requirements and all(opt in planned for opt in csc5610bus):
+        reqs["CSC5610"] = csc5610bus
+        requirements.remove("CSC5610")
+        planned = [x for x in planned if x not in csc5610bus]
+
+    electives = ["BUS6141"] # Approved electives that don't fit into course number logic
     for crs in requirements.copy():
         if crs.startswith("CSC5xxx"):
             for opt in planned:
-                if opt.startswith(("BME","CSC")) and opt[3].isdigit() and int(opt[3]) >= 5:
+                if (opt in electives) or \
+                    (opt.startswith(("BME","CSC")) and opt[3].isdigit() and int(opt[3]) >= 5):
                     reqs[crs] = opt
                     requirements.remove(crs)
                     planned.remove(opt)
