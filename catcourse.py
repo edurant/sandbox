@@ -11,6 +11,8 @@ from bs4 import BeautifulSoup
 NAVOID = {  # map from cur_cat_oid to navoid
     40: 1392,  # UG AY25 June
     41: 1448,  # GR AY25 June
+    42: 1486,  # UG AY26
+    43: 1542,  # GR AY26
 }
 
 
