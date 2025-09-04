@@ -1,3 +1,3 @@
-# Eric Durant's MSOE Repository
+# Eric Durant's Sandbox Repository
 
-Shared code, etc., for MSOE activities, assessment, etc.
+Miscellaneous development, mostly Python and MATLAB

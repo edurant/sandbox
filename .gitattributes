@@ -1,0 +1,8 @@
+# Enforce LF for code
+*.py text eol=lf
+*.m  text eol=lf
+*.sh text eol=lf
+
+# Allow binaries untouched
+*.jpg -text
+*.png -text
