@@ -1,9 +1,10 @@
-name: working
+﻿name: working
 
 channels:
   - conda-forge
 dependencies:
   - beautifulsoup4
+  - black
   - ipython
   - librosa
   - matplotlib
@@ -11,6 +12,7 @@ dependencies:
   - openpyxl
   - pandas
   - pip
+  - pydocstyle
   - pylint
   - pyperclip
   - python=3.13
