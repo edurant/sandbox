@@ -6,6 +6,9 @@ Fetch and parse course catalog listings to course links in markdown.
 
 Supports multiple universities that use the "catalog.UNIVERSITY.edu" Acalog/PHP system.
 Default university is 'msoe'. You can select others with -u/--university.
+
+For example, for a university not directly supported:
+./catcourse.py -u charlotte -p ITSC -c 40 -n 4989
 """
 
 import argparse
