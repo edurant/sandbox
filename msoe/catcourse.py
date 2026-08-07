@@ -1,5 +1,4 @@
 ﻿#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 
 """
 Fetch and parse course catalog listings to course links in markdown.
@@ -90,6 +89,17 @@ def fetch_and_parse_url(
     params = {"filter[27]": course_prefix, "cur_cat_oid": cur_cat_oid, "navoid": navoid}
     response = requests.get(base_url, params=params, timeout=10)
     response.raise_for_status()  # Ensure we notice bad responses
+    if response.status_code == 202 and not response.content:
+        raise RuntimeError(
+            f"Received an empty HTTP 202 response from {response.url}. "
+            "The site may require JavaScript or be blocking automated requests."
+        )
+    if response.status_code != 200:
+        raise RuntimeError(
+            f"Unexpected HTTP status {response.status_code} for {response.url}"
+        )
+    if not response.content:
+        raise RuntimeError(f"Received an empty response from {response.url}")
 
     soup = BeautifulSoup(response.content, "html.parser")
     title_span = soup.find("span", class_="acalog_catalog_name")
