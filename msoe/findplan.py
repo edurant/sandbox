@@ -1,4 +1,4 @@
-﻿#!/usr/bin/env python3
+#!/usr/bin/env python3
 
 """Find, select, and copy to clipboard MSOE STAT advising file for a given student."""
 

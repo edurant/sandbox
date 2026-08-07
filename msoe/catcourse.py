@@ -1,4 +1,4 @@
-﻿#!/usr/bin/env python3
+#!/usr/bin/env python3
 
 """
 Fetch and parse course catalog listings to course links in markdown.
