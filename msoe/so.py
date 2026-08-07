@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 
 """Summarize MSOE EECS SO XLSX files recursively."""
 
@@ -13,12 +12,13 @@
 
 # TODO: Select year range
 
+import argparse
 import os
 import re
-import argparse
 from datetime import datetime
-import pandas as pd
+
 import openpyxl
+import pandas as pd
 
 TIME_TAG = datetime.now().strftime(
     "%G%m%dT%H%M%S"

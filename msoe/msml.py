@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 
 """
 Given the XLSX master file for MSML course planning, do one of the following.
@@ -10,17 +9,19 @@ Given the XLSX master file for MSML course planning, do one of the following.
   * Given a term code, list each course that is planned and who is taking it
 """
 
-import os
-import re
-from io import StringIO
 import argparse
-import shutil
 import contextlib
-import tempfile
+import os
 import pprint
+import re
+import shutil
+import tempfile
+from io import StringIO
+
 import numpy as np
 import pandas as pd
 import pyperclip
+
 from findplan import get_plans, read_stat_plan
 
 

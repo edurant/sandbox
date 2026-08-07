@@ -1,14 +1,14 @@
 ﻿#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 
 """Find, select, and copy to clipboard MSOE STAT advising file for a given student."""
 
-import os
 import argparse
-from glob import glob
-from warnings import warn
 import hashlib
+import os
+from glob import glob
 from io import StringIO
+from warnings import warn
+
 import numpy as np
 import pandas as pd
 import pyperclip

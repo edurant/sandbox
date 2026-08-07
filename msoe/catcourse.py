@@ -12,14 +12,13 @@ For example, for a university not directly supported:
 
 import argparse
 import re
-from typing import Dict, List, Tuple
 
 import requests
 from bs4 import BeautifulSoup
 
 # Known cur_cat_oid to navoid mappings per university.
 # Keep insertion order so we can choose a sensible default cur_cat_oid (the last entry).
-NAVOID_LOOKUP: Dict[str, Dict[int, int]] = {
+NAVOID_LOOKUP: dict[str, dict[int, int]] = {
     "msoe": {
         40: 1392,  # UG AY25 June
         41: 1448,  # GR AY25 June
@@ -61,12 +60,12 @@ def university_catalog_base(token: str) -> str:
 
 
 # This global will be set in main() based on selected university
-NAVOID: Dict[int, int] = {}
+NAVOID: dict[int, int] = {}
 
 
 def fetch_and_parse_url(
     base_url: str, course_prefix: str, cur_cat_oid: int, navoid: int
-) -> Tuple[str, List[Tuple[str, str]]]:
+) -> tuple[str, list[tuple[str, str, str]]]:
     """
     Fetch the webpage and parse it for course links.
 
@@ -78,7 +77,7 @@ def fetch_and_parse_url(
 
     Returns:
     catalog_title (str)
-    course_links (list[tuple[str, str, str]]): List of (number, title, link) tuples.
+    course_links (list[tuple[str, str, str]]): list of (number, title, link) tuples.
     """
     if navoid == -1:
         if cur_cat_oid in NAVOID:
@@ -86,7 +85,11 @@ def fetch_and_parse_url(
         else:
             raise ValueError(f"Cannot infer navoid for {cur_cat_oid=}, use -n")
 
-    params = {"filter[27]": course_prefix, "cur_cat_oid": cur_cat_oid, "navoid": navoid}
+    params: dict[str, str | int] = {
+        "filter[27]": course_prefix,
+        "cur_cat_oid": cur_cat_oid,
+        "navoid": navoid,
+    }
     response = requests.get(base_url, params=params, timeout=10)
     response.raise_for_status()  # Ensure we notice bad responses
     if response.status_code == 202 and not response.content:
@@ -115,7 +118,7 @@ def fetch_and_parse_url(
         # Fallback: try to trim trailing path and use base
         site_root = base_url.rsplit("/", 1)[0]
 
-    course_links: List[Tuple[str, str]] = []
+    course_links: list[tuple[str, str, str]] = []
     for a_tag in soup.find_all("a", href=re.compile(r"^preview_course")):
         text = a_tag.get_text(strip=True)
         if not text:
@@ -127,7 +130,8 @@ def fetch_and_parse_url(
         course_title = parts[1].strip() if len(parts) > 1 else ""
 
         # Build an absolute link; replace '_nopop' to get the full page
-        href = a_tag.get("href", "")
+        href = a_tag.get("href")
+        assert isinstance(href, str)
         course_link = f"{site_root}/{href.replace('_nopop', '')}"
 
         course_links.append((course_number, course_title, course_link))
@@ -185,7 +189,9 @@ def main() -> None:
         default_cur = None  # Unknown: user must supply -c and -n
 
     # Choose final cur_cat_oid
-    cur_cat_oid = args.cur_cat_oid if args.cur_cat_oid is not None else default_cur
+    cur_cat_oid: int | None = args.cur_cat_oid
+    if cur_cat_oid is None:
+        cur_cat_oid = default_cur
 
     # If university is unknown, require both -c and -n (navoid must not be -1)
     if known_mapping:
@@ -196,6 +202,7 @@ def main() -> None:
             parser.error(
                 f"Unknown university '{uni_token}'. Supply both -c/--cur_cat_oid and -n/--navoid."
             )
+    assert cur_cat_oid is not None
 
     # Build base URL for the selected university
     catalog_base = university_catalog_base(uni_token)
